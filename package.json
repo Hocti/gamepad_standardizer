@@ -1,0 +1,41 @@
+{
+	"name": "gamepad_standardizer",
+	"version": "1.0.0",
+	"main": "./dist/gamepad_standardizer.cjs.js",
+	"module": "./dist/gamepad_standardizer.esm.js",
+	"bundle": "./dist/gamepad_standardizer.js",
+	"types": "./dist/gamepad_standardizer.d.ts",
+	"namespace": "gamepad_standardizer",
+	"exports": {
+		".": {
+			"import": {
+				"types": "./dist/gamepad_standardizer.d.ts",
+				"default": "./dist/gamepad_standardizer.esm.js"
+			},
+			"require": {
+				"types": "./dist/gamepad_standardizer.d.ts",
+				"default": "./dist/gamepad_standardizer.cjs.js"
+			}
+		}
+	},
+	"scripts": {
+		"watch": "rollup -c --watch",
+		"build": "cross-env NODE_ENV=production rollup -c"
+	},
+	"author": "hocti",
+	"license": "MIT",
+	"keywords": [
+		"gamepad"
+	],
+	"readme": "README.md",
+	"devDependencies": {
+		"@rollup/plugin-node-resolve": "^15.2.3",
+		"@types/node": "^20.10.4",
+		"cross-env": "^7.0.3",
+		"esbuild": "^0.19.9",
+		"rollup": "^4.9.0",
+		"rollup-plugin-dts": "^6.1.0",
+		"rollup-plugin-esbuild": "^6.1.0",
+		"typescript": "^5.3.3"
+	}
+}

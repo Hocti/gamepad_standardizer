@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo</title>
+    <style>
+        table{
+            margin: 10px;
+            border: 2px solid black;
+            display: inline-block;
+        }
+        td{
+            border: 1px solid black;
+        }
+        td:nth-last-child(1){
+            width:100px;
+            text-overflow:ellipsis;
+            overflow: hidden;
+            display: block;
+
+        }
+        td.true{
+            background-color: yellow;
+        }
+    </style>
+</head>
+<body>
+    <div id="output">Press any key on gamepad</div>
+    <script type="module">
+        import * as gamepad_standardizer from "../dist/gamepad_standardizer.esm.js";
+const output = document.getElementById('output');
+
+//default have sony & nintendo 2 profile
+//adding '8 bit do SF30' button name profile
+gamepad_standardizer.addbtnNameProfile({
+    product:"ab21",
+    vendor:"2dc8",
+    defaultSwapAB:true,
+    buttonNames:['B','A','Y','X','L','R',null,null,'select','start']
+    // button order reference:
+    // https://www.w3.org/TR/gamepad/#remapping
+})
+
+const infos=[];
+const btnNames=[];
+const btnNewNames=[];
+
+//set gamecontrollerdb.txt ,default is gitbub's version
+gamepad_standardizer.SDLDB_setLink('./gamecontrollerdb.txt')
+
+window.addEventListener('gamepadconnected', function(e) {
+    gamepad_standardizer.getGamepadInfo(e.gamepad).then(function(gamepad_info){
+
+        //prepare the gamepad info and button name
+        infos[e.gamepad.index]=gamepad_info;
+
+        //the button names are default profile
+        btnNames[e.gamepad.index]=gamepad_standardizer.getButtonName(gamepad_info);
+
+        //the button names are get from the addbtnNameProfile
+        btnNewNames[e.gamepad.index]=gamepad_standardizer.getButtonName(gamepad_info,true);
+
+        console.log(gamepad_info,btnNames,btnNewNames)
+    });
+}); 
+
+
+function frameUpdate(){
+    const gamepads=navigator.getGamepads();
+    let outputHtml='';
+    let gpCount=0
+    for(let i=0;i<gamepads.length;i++){
+        if(gamepads[i] && infos[i]){
+            gpCount++;
+
+            //get the browser raw button press and value
+            let table1=`<tr><th colspan=2>RAW Button Input</th><tr>
+                <tr><th>Index</th><th>pressed</th><th>Value</th><tr>`
+            for(let j in gamepads[i].buttons){
+                table1+=`<tr><td>${j}</td><td>${gamepads[i].buttons[j].pressed}</td><td>${gamepads[i].buttons[j].value}</td></tr>`
+            }
+
+            //get the mapped button press and value, with name & new name we set before
+            const presses=gamepad_standardizer.getButtonPress(gamepads[i],infos[i])
+            const values=gamepad_standardizer.getButtonValue(gamepads[i],infos[i])
+            let table2=`<tr><th colspan=2>Mapped Button Input</th><tr>
+                <tr><th>Index</th><th>Default Name</th><th>New Name</th><th>Pressed</th><th>Value</th><tr>`
+            for(let j=0;j<btnNames[i].length;j++){
+                if(!btnNames[i][j]){
+                    table2+=`<tr><td>${j}</td><td colspan=4>unuse</td></tr>`
+                }else{
+
+                    table2+=`<tr>
+                        <td>${j}</td>
+                        <td>${btnNames[i][j]}</td>
+                        <td>${btnNewNames[i][j]}</td>
+                        <td>${presses[j]}</td>
+                        <td>${values[j]}</td>
+                    </tr>`
+                }
+            }
+
+            //get the browser raw axes value
+            let table3=`<tr><th colspan=2>RAW axes</th><tr>
+                <tr><th>index</th><th>Value</th><tr>`
+            for(let j in gamepads[i].axes){
+                table3+=`<tr><td>${j}</td><td>${gamepads[i].axes[j]}</td></tr>`
+            }
+
+            //get the mapped analog and dpad value
+            const direction=gamepad_standardizer.getDirection(gamepads[i],infos[i])
+            let table4=`<tr><th colspan=2>Mapped Direction</th><tr>
+                <tr><th>type</th><th>Key</th><th>Value</th><tr>`
+            for(let j in direction){
+                if(direction[j]){
+                    for(let k in direction[j])
+                        table4+=`<tr><td>${j}</td><td>${k}</td><td>${direction[j][k]}</td></tr>`
+                }
+            }
+
+            //extra analogs if available
+            const analogs=gamepad_standardizer.getExtraAnalog(gamepads[i],infos[i])
+            let table5
+            if(Object.keys(analogs).length){//}.keys().length>0){
+
+                table5=`<table>
+                    <tr><th colspan=2>Mapped Extra Analog</th><tr>
+                        <tr><th>Key</th><th>Value</th><tr>`
+                            for(let j in analogs){
+                                table5+=`<tr><td>${j}</td><td>${analogs[j]}</td></tr>`
+                            }
+                            table5+=`</table>`
+                        }
+            
+
+            outputHtml+=`<h1>Gamepad ${i}: ${infos[i].name}</h1>
+            is standard: ${infos[i].standard}<br/>
+            <div class='tables'>
+
+                <table>${table1}</table>
+                <table>${table3}</table>
+
+                <table>${table2}</table>
+                <table>${table4}</table>
+                ${table5??''}
+            </div><hr/>`
+        }
+    }
+
+    outputHtml=outputHtml.replaceAll(`<td>true</td>`,`<td class='true'>true</td>`)
+    if(gpCount.length===0){
+        outputHtml='Press any key on gamepad'
+    }
+    output.innerHTML=outputHtml;
+
+    requestAnimationFrame(frameUpdate)
+}
+window.requestAnimationFrame(frameUpdate)
+</script>
+</body>
+</html>
