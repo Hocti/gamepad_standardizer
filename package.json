@@ -1,6 +1,6 @@
 {
 	"name": "gamepad_standardizer",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"main": "./dist/gamepad_standardizer.cjs.js",
 	"module": "./dist/gamepad_standardizer.esm.js",
 	"bundle": "./dist/gamepad_standardizer.js",
@@ -20,8 +20,7 @@
 	},
 	"scripts": {
 		"watch": "rollup -c --watch",
-		"build": "cross-env NODE_ENV=production rollup -c",
-		"demo": "ws --http2"
+		"build": "cross-env NODE_ENV=production rollup -c"
 	},
 	"author": "hocti",
 	"license": "MIT",
@@ -32,11 +31,12 @@
 	],
 	"homepage": "https://github.com/Hocti/gamepad_standardizer",
 	"repository": {
-	  "type": "git",
-	  "url": "https://github.com/Hocti/gamepad_standardizer"
+		"type": "git",
+		"url": "https://github.com/Hocti/gamepad_standardizer"
 	},
 	"readme": "README.md",
 	"devDependencies": {
+		"@rollup/plugin-commonjs": "^25.0.7",
 		"@rollup/plugin-node-resolve": "^15.2.3",
 		"@types/node": "^20.10.4",
 		"cross-env": "^7.0.3",

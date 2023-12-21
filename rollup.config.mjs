@@ -1,6 +1,6 @@
 //import json from '@rollup/plugin-json';
 import resolve from '@rollup/plugin-node-resolve';
-//import commonjs from '@rollup/plugin-commonjs';
+import commonjs from '@rollup/plugin-commonjs';
 import esbuild from 'rollup-plugin-esbuild';
 import { dts } from "rollup-plugin-dts";
 
@@ -26,9 +26,9 @@ const plugins = [
         browser: true,
         preferBuiltins: false,
     }),
+    commonjs(),
     /*
     json(),
-    commonjs(),
     */
 ];
 

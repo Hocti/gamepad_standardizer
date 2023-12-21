@@ -29,6 +29,7 @@
     <div id="output">Press any key on gamepad</div>
     <script type="module">
         import * as gamepad_standardizer from "../dist/gamepad_standardizer.esm.js";
+
 const output = document.getElementById('output');
 
 //default have sony & nintendo 2 profile
@@ -41,6 +42,8 @@ gamepad_standardizer.addbtnNameProfile({
     // button order reference:
     // https://www.w3.org/TR/gamepad/#remapping
 })
+
+//gamepad_standardizer.SDLDB_procesExtraText(`platform:Android,browser:Chrome,name:8BitDo Zero 2,vendor:2dc8,product:9018,defaultSwapAB:1,buttonNames:B|A|Y|X|L|R|||select|start,a:b0,b:b1,back:b9,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,leftshoulder:b4,leftx:a0,lefty:a1,rightshoulder:b20,start:b10,x:b19,y:b2`)
 
 const infos=[];
 const btnNames=[];
@@ -63,13 +66,12 @@ window.addEventListener('gamepadconnected', function(e) {
 
         console.log(gamepad_info,btnNames,btnNewNames)
     });
-}); 
-
+});
 
 function frameUpdate(){
     const gamepads=navigator.getGamepads();
-    let outputHtml='';
-    let gpCount=0
+    let gpCount=0;
+    let outputHtml=``
     for(let i=0;i<gamepads.length;i++){
         if(gamepads[i] && infos[i]){
             gpCount++;
@@ -135,6 +137,7 @@ function frameUpdate(){
             
 
             outputHtml+=`<h1>Gamepad ${i}: ${infos[i].name}</h1>
+            <h3>${infos[i].originInfo.id}</h3>
             is standard: ${infos[i].standard}<br/>
             <div class='tables'>
 
@@ -149,10 +152,12 @@ function frameUpdate(){
     }
 
     outputHtml=outputHtml.replaceAll(`<td>true</td>`,`<td class='true'>true</td>`)
-    if(gpCount.length===0){
+    if(gpCount===0){
         outputHtml='Press any key on gamepad'
     }
-    output.innerHTML=outputHtml;
+    if(output.innerHTML!=outputHtml){
+        output.innerHTML=outputHtml;
+    }
 
     requestAnimationFrame(frameUpdate)
 }
