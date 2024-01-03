@@ -37,8 +37,19 @@ export function getAnalogDirection(d:xy,threshold:number): directionWrap {
     const left=x<-toDpadThreshold;
     const right=x>toDpadThreshold;
     const numpad = dpadPress2Numpad({up,down,left,right})
-    return { radian, degree,distance ,numpad,up,down,left,right,x,y,type:'analog'};
+    return { 
+        up,down,left,right,
+        numpad,
+        radian:fixed6(radian),
+        degree,
+        distance:fixed6(distance),
+        x:Math.abs(x)<threshold?0:fixed6((Math.abs(x)-threshold)/(1-threshold)*(x>0?1:-1)),
+        y:Math.abs(y)<threshold?0:fixed6((Math.abs(y)-threshold)/(1-threshold)*(y>0?1:-1)),
+        type:'analog'
+    };
 }
+
+const fixed6=(n:number)=>Math.round(n*1000000)/1000000;
 
 export function getDpadDirection(d:dpadPress): directionWrap {
     const numpad=dpadPress2Numpad(d)
@@ -49,7 +60,7 @@ export function getDpadDirection(d:dpadPress): directionWrap {
         numpad,
         distance:numpad===5?0:1,
         degree:numpad2Degree[numpad],
-        radian:numpad2Degree[numpad]/180*Math.PI,
+        radian:fixed6(numpad2Degree[numpad]/180*Math.PI),
         type:'dpad'
     }
 }

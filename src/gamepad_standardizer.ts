@@ -1,4 +1,5 @@
 import {gamepadInfo,gamePadProfile,directSource} from './types';
+import {HDpadMapping,SYSTEM_BUTTON_NAME,oppositeDpad} from './config'
 import {dpad,xy,dpadPress,directionWrap,getAnalogDirection,getDpadDirection} from './direction';
 
 //from SDL DB================================================================
@@ -120,7 +121,7 @@ function SDLDB_processDict(data:Record<string,string>,guid:string=''): {
 
         if(type==='b'){//button
             buttonNames[num]=key;
-            const defautIndex=UNSTANDARD_BUTTON_NAME.indexOf(key);
+            const defautIndex=SYSTEM_BUTTON_NAME.indexOf(key);
             if(defautIndex!==-1 && defautIndex!==num){
                 keyMapping[num]=defautIndex;
             }
@@ -143,10 +144,6 @@ function SDLDB_processDict(data:Record<string,string>,guid:string=''): {
                 hatDpad={up:0,down:0,left:0,right:0};
             }
             const [hat,hatval]=valArr[3].split('.')
-
-            if(guid=='030000004c050000e60c000000010000'){
-                console.log(hatval,parseInt(hatval),key.substring(2) as dpad)
-            }
             if(hatval){
                 if(key.substring(0,2)==='dp'){
                     hatDpad[key.substring(2) as dpad]=parseInt(hatval);
@@ -155,9 +152,6 @@ function SDLDB_processDict(data:Record<string,string>,guid:string=''): {
                 }
             }
         }
-    }
-    if(guid=='030000004c050000e60c000000010000'){
-        console.log(hatDpad)
     }
 
     return {
@@ -218,8 +212,6 @@ export function SDLDB_procesExtraText(text:string):void{
 }
 
 //button alt name profile================================================================
-
-const UNSTANDARD_BUTTON_NAME=['a','b','x','y','leftshoulder','rightshoulder','lefttrigger','righttrigger','back','start','leftstick','rightstick','dpup','dpdown','dpleft','dpright','guide'];
 
 const XINPUT_BUTTON_NAME=['A','B','X','Y','LB','RB','LT','RT','back','start','left Stick','right Stick','🔼','🔽','◀️','▶️','home']
 
@@ -294,7 +286,7 @@ function parseGamepadId(input: string): { name: string;vendor: string; product: 
 export async function getGamepadInfo(gamepad:Gamepad):Promise<gamepadInfo>{
     const baseInfo:gamepadInfo={...parseGamepadId(gamepad.id),
         standard:gamepad.mapping==='standard',
-        buttonNames:UNSTANDARD_BUTTON_NAME,
+        buttonNames:SYSTEM_BUTTON_NAME,
         analogNames:['leftx','lefty','rightx','righty']
     };
     const originInfo={
@@ -360,17 +352,6 @@ export async function getGamepadInfo(gamepad:Gamepad):Promise<gamepadInfo>{
 const lrxyReg=/^([+|-])?(left|right)(x|y|trigger)$/
 
 //hardcode..
-const HDpadMapping:Record<string,number>={
-    '9':    0b0000,
-    '-7':   0b0001,
-    '-3':   0b0010,
-    '-5':   0b0011,
-    '1':    0b0100,
-    '-1':   0b0110,
-    '5':    0b1000,
-    '7':    0b1001,
-    '3':    0b1100,
-}
 
 function makeDirection(threshold:number,dpad?:dpadPress,leftA?:xy,rightA?:xy):Record<directSource,directionWrap|null>{
     return {
@@ -427,9 +408,10 @@ export function getDirectionAvailable(info:gamepadInfo):Record<directSource,bool
         if(name.substring(0,2)==='dp'){
             haveTypeSet.add('dpad');
         }else{
-            const valArr=info.buttonNames[i]!.match(lrxyReg)
+            const valArr=name.match(lrxyReg)
+            //const valArr=info.buttonNames[i]!.match(lrxyReg)
             if(valArr){
-                const [dir,lr,xy]=valArr;
+                const [,dir,lr,xy]=valArr;
                 haveTypeSet.add(lr);
             }
         }

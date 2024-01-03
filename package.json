@@ -1,6 +1,6 @@
 {
 	"name": "gamepad_standardizer",
-	"version": "1.0.1",
+	"version": "1.0.4",
 	"main": "./dist/gamepad_standardizer.cjs.js",
 	"module": "./dist/gamepad_standardizer.esm.js",
 	"bundle": "./dist/gamepad_standardizer.js",

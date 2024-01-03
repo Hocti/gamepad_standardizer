@@ -57,9 +57,9 @@ After using the Gamepad Standardizer from [my demo](https://hocti-demo.s3.ap-sou
 ```bash
 npm install gamepad-standardizer
 ```
-then
+or using jsdelivr
 ```html
-<script src="../dist/gamepad_standardizer.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gamepad_standardizer/dist/gamepad_standardizer.js"></script>
 <script>
 console.log(gamepad_standardizer)
 </script>
@@ -67,7 +67,7 @@ console.log(gamepad_standardizer)
 or
 ```html
 <script type="module">
-import * as gamepad_standardizer from "../dist/gamepad_standardizer.esm.js";
+import * as gamepad_standardizer from "https://cdn.jsdelivr.net/npm/gamepad_standardizer/dist/gamepad_standardizer.esm.js";
 console.log(gamepad_standardizer)
 </script>
 ```
@@ -88,7 +88,7 @@ console.log(gamepadInfo);
 Get the status of directional inputs from the gamepad:
 
 ```javascript
-const directionStatus = getDirectionAvailable(navigator.getGamepads()[0], gamepadInfo);
+const directionStatus = getDirection(navigator.getGamepads()[0], gamepadInfo);
 console.log(directionStatus);
 ```
 

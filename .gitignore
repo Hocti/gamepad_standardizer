@@ -134,6 +134,7 @@ desktop.ini
 **/RECOVER_*.fla
 .DS_Store
 _bk/
+_remark/
 todo.txt
 
 package-lock.json

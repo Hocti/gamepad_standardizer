@@ -64,10 +64,15 @@ window.addEventListener('gamepadconnected', function(e) {
         //the button names are get from the addbtnNameProfile
         btnNewNames[e.gamepad.index]=gamepad_standardizer.getButtonName(gamepad_info,true);
 
-        console.log(gamepad_info,btnNames,btnNewNames)
+
+        
+
+        console.log(gamepad_info,btnNames[e.gamepad.index],btnNewNames[e.gamepad.index])
+        console.log(gamepad_standardizer.getDirectionAvailable(gamepad_info))
     });
 });
 
+let lastH='';
 function frameUpdate(){
     const gamepads=navigator.getGamepads();
     let gpCount=0;
@@ -155,8 +160,9 @@ function frameUpdate(){
     if(gpCount===0){
         outputHtml='Press any key on gamepad'
     }
-    if(output.innerHTML!=outputHtml){
+    if(lastH!=outputHtml){
         output.innerHTML=outputHtml;
+        lastH=outputHtml;
     }
 
     requestAnimationFrame(frameUpdate)
