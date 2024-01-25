@@ -25,21 +25,6 @@ const OS:string=(function detectOS() {
 
     return '';
 })()
-const BROWSER:string=(function detectOS() {
-    const userAgent = window.navigator.userAgent;
-    if (userAgent.indexOf('Firefox') !== -1) {
-        return 'Firefox';
-    }
-    const hasSafari=userAgent.indexOf('Safari') !== -1
-    const hasChrome=userAgent.indexOf('Chrome') !== -1
-    if(hasSafari && !hasChrome){
-        return 'Safari';
-    }
-    if(hasChrome){
-        return 'Chrome';
-    }
-    return '';
-})()
 
 let gamepadDB:gamepadInfo[]=[];
 let gamePadDBLink=`https://raw.githubusercontent.com/gabomdq/SDL_GameControllerDB/master/gamecontrollerdb.txt`;
@@ -75,6 +60,7 @@ export function SDLDB_processText(text:string):void{
         }
 
         if(OS!=='' && data['platform']!=OS)continue;
+        //if(data['platform']!='Windows')continue;
 
         const result=SDLDB_processDict(data,guid)
         
@@ -219,7 +205,7 @@ const btnNameProfile:gamePadProfile[]=[
     {
         vendorName:'Sony',
         vendor:'054c',
-        buttonNames:['🗙','⭕','🔳','🛆','L1','R1','L2','R2','Share','Options','L3','R3','🔼','🔽','◀️','▶️','PS','Touch']
+        buttonNames:['X','O','square','triangle','L1','R1','L2','R2','Share','Options','L3','R3','🔼','🔽','◀️','▶️','PS','Touch']
     },
     {
         vendorName:'Nintendo',
@@ -296,6 +282,7 @@ export async function getGamepadInfo(gamepad:Gamepad):Promise<gamepadInfo>{
         index:gamepad.index,
         mapping:gamepad.mapping
     }
+    console.log("getGamepadInfo 12")
     
     //unstandard
     if(gamepad.mapping!=='standard'){
@@ -305,13 +292,38 @@ export async function getGamepadInfo(gamepad:Gamepad):Promise<gamepadInfo>{
                 await SDLDB_fetch();
             }
             for(let info of extraGamepadDB){
-                if(info.vendor===baseInfo.vendor && info.product===baseInfo.product && info.platform===OS && info.browser===BROWSER){
+                if(info.vendor===baseInfo.vendor && info.product===baseInfo.product){//} && info.platform===OS && info.browser===BROWSER){
                     return {...info,originInfo};
                 }
             }
             for(let info of gamepadDB){
                 if(info.vendor===baseInfo.vendor && info.product===baseInfo.product){
                     //unstandard and DB data
+                    if(OS!='Windows'){
+                        let analogNames:string[]=['leftx','lefty','rightx','righty'];
+                        let analogPlusNames:string[]=[];
+                        let analogMinusNames:string[]=[];
+                        const buttonNames:string[]=[...SYSTEM_BUTTON_NAME];
+                        const keyMapping:number[]=[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16];
+                        /*
+                        let analogNames:string[]=[...info.analogNames];
+                        let analogPlusNames:string[]=[...info.analogPlusNames!];
+                        let analogMinusNames:string[]=[...info.analogMinusNames!];
+                        const buttonNames:string[]=[];
+                        const keyMapping:number[]=[];
+                        for(let i=0;i<SYSTEM_BUTTON_NAME.length;i++){
+                            if(info.buttonNames.indexOf(SYSTEM_BUTTON_NAME[i])<0){
+                                continue;
+                            }
+                            buttonNames[i]=SYSTEM_BUTTON_NAME[i];
+                            keyMapping[i]=i;
+                        }
+                        */
+                        return {...info,
+                            buttonNames,keyMapping,
+                            analogNames,analogPlusNames,analogMinusNames,
+                            originInfo};    
+                    }
                     return {...info,originInfo};
                 }
             }
