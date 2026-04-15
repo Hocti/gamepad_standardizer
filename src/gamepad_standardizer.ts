@@ -1,36 +1,29 @@
-import { gamepadInfo, gamePadProfile, directSource } from "./types";
-import { HDpadMapping, SYSTEM_BUTTON_NAME, oppositeDpad } from "./config";
-import {
-	dpad,
-	xy,
-	dpadPress,
-	directionWrap,
-	getAnalogDirection,
-	getDpadDirection,
-} from "./direction";
+import { gamepadInfo, gamePadProfile, directSource } from './types';
+import { HDpadMapping, SYSTEM_BUTTON_NAME, oppositeDpad } from './config';
+import { dpad, xy, dpadPress, directionWrap, getAnalogDirection, getDpadDirection } from './direction';
 
 //from SDL DB================================================================
 
 const OS: string = (function detectOS() {
 	const userAgent = window.navigator.userAgent;
 	const platform = window.navigator.platform;
-	const macosPlatforms = ["Macintosh", "MacIntel", "MacPPC", "Mac68K"];
-	const windowsPlatforms = ["Win32", "Win64", "Windows", "WinCE"];
-	const iosPlatforms = ["iPhone", "iPad", "iPod"];
+	const macosPlatforms = ['Macintosh', 'MacIntel', 'MacPPC', 'Mac68K'];
+	const windowsPlatforms = ['Win32', 'Win64', 'Windows', 'WinCE'];
+	const iosPlatforms = ['iPhone', 'iPad', 'iPod'];
 
 	if (macosPlatforms.indexOf(platform) !== -1) {
-		return "Mac OS X";
+		return 'Mac OS X';
 	} else if (iosPlatforms.indexOf(platform) !== -1) {
-		return "iOS";
+		return 'iOS';
 	} else if (windowsPlatforms.indexOf(platform) !== -1) {
-		return "Windows";
+		return 'Windows';
 	} else if (/Android/.test(userAgent)) {
-		return "Android";
+		return 'Android';
 	} else if (/Linux/.test(platform)) {
-		return "Linux";
+		return 'Linux';
 	}
 
-	return "";
+	return '';
 })();
 
 let gamepadDB: gamepadInfo[] = [];
@@ -48,13 +41,13 @@ export async function SDLDB_fetch(_dbtxtlink: string = gamePadDBLink) {
 
 const lineReg = /^([^a-z0-9]{0,1})([a-z]{1})([\d.]{1,3})([^a-z0-9]{0,1})$/;
 export function SDLDB_processText(text: string): void {
-	let lines = text.split("\n");
+	let lines = text.split('\n');
 
 	//let bKeySet:Set<string>=new Set();
 
 	for (let line of lines) {
-		if (line.startsWith("#")) continue;
-		let arr = line.split(",");
+		if (line.startsWith('#')) continue;
+		let arr = line.split(',');
 
 		const guid = arr[0];
 		if (guid.length !== 32) continue;
@@ -64,11 +57,11 @@ export function SDLDB_processText(text: string): void {
 
 		const data: Record<string, string> = {};
 		for (let i = 2, t = arr.length - 1; i < t; i++) {
-			const [key, value] = arr[i].split(":");
+			const [key, value] = arr[i].split(':');
 			data[key] = value;
 		}
 
-		if (OS !== "" && data["platform"] != OS) continue;
+		if (OS !== '' && data['platform'] != OS) continue;
 		//if(data['platform']!='Windows')continue;
 
 		const result = SDLDB_processDict(data, guid);
@@ -83,13 +76,13 @@ export function SDLDB_processText(text: string): void {
 		});
 	}
 
-	console.log('asdasd', gamepadDB.length)
+	console.log('asdasd', gamepadDB.length);
 	//console.log(bKeySet)
 }
 
 function SDLDB_processDict(
 	data: Record<string, string>,
-	guid: string = "",
+	guid: string = ''
 ): {
 	standard: boolean;
 	buttonNames: string[];
@@ -107,7 +100,7 @@ function SDLDB_processDict(
 	let hatDpad: Record<dpad, number> | undefined;
 
 	for (const key in data) {
-		if (key === "platform") continue;
+		if (key === 'platform') continue;
 		const value = data[key];
 
 		const valArr = value.match(lineReg);
@@ -118,7 +111,7 @@ function SDLDB_processDict(
 		//  +/-,a/b/h,0~n/0.2~0.8,~
 		const num = parseInt(valArr[3]);
 
-		if (type === "b") {
+		if (type === 'b') {
 			//button
 			buttonNames[num] = key;
 			const defautIndex = SYSTEM_BUTTON_NAME.indexOf(key);
@@ -126,13 +119,13 @@ function SDLDB_processDict(
 				keyMapping[num] = defautIndex;
 			}
 			//bKeySet.add(key);
-		} else if (type === "a") {
+		} else if (type === 'a') {
 			//analog
 			//bKeySet.add(key);
-			if (start == "") {
+			if (start == '') {
 				analogNames[num] = key;
-			} else if (start !== "") {
-				if (start == "+") {
+			} else if (start !== '') {
+				if (start == '+') {
 					analogPlusNames[num] = key;
 					//bKeySet.add(key);
 				} else {
@@ -140,14 +133,14 @@ function SDLDB_processDict(
 					//bKeySet.add(key);
 				}
 			}
-		} else if (type === "h") {
+		} else if (type === 'h') {
 			//SDL hat to Dpad
 			if (!hatDpad) {
 				hatDpad = { up: 0, down: 0, left: 0, right: 0 };
 			}
-			const [hat, hatval] = valArr[3].split(".");
+			const [hat, hatval] = valArr[3].split('.');
 			if (hatval) {
-				if (key.substring(0, 2) === "dp") {
+				if (key.substring(0, 2) === 'dp') {
 					hatDpad[key.substring(2) as dpad] = parseInt(hatval);
 				} else {
 					//*
@@ -170,24 +163,24 @@ function SDLDB_processDict(
 const extraGamepadDB: gamepadInfo[] = [];
 //platform:asdf,browser:asdf,name:asdf,vendor:asdf,product:asdf,a:b0...
 export function SDLDB_procesExtraText(text: string): void {
-	let lines = text.split("\n");
-	console.log('SDLDB_procesExtraText', lines.length)
+	let lines = text.split('\n');
+	console.log('SDLDB_procesExtraText', lines.length);
 	for (let line of lines) {
-		let arr = line.split(",");
+		let arr = line.split(',');
 		const data: Record<string, string> = {};
 		for (let i = 2, t = arr.length - 1; i < t; i++) {
-			const [key, value] = arr[i].split(":");
+			const [key, value] = arr[i].split(':');
 			data[key] = value;
 		}
 
-		const platform = data["platform"];
-		const browser = data["browser"];
-		const name = data["name"];
-		const vendor = data["vendor"];
-		const product = data["product"];
+		const platform = data['platform'];
+		const browser = data['browser'];
+		const name = data['name'];
+		const vendor = data['vendor'];
+		const product = data['product'];
 
-		const buttonNames = data["buttonNames"]?.split("|");
-		const defaultSwapAB = data["defaultSwapAB"] ? true : false;
+		const buttonNames = data['buttonNames']?.split('|');
+		const defaultSwapAB = data['defaultSwapAB'] ? true : false;
 
 		const result = SDLDB_processDict(data);
 
@@ -219,73 +212,73 @@ const NINTENDO_VENDOR_ID = '057e';
 const SONY_VENDOR_ID = '054c';
 
 const XINPUT_BUTTON_NAME = [
-	"A",
-	"B",
-	"X",
-	"Y",
-	"LB",
-	"RB",
-	"LT",
-	"RT",
-	"back",
-	"start",
-	"left Stick",
-	"right Stick",
-	"🔼",
-	"🔽",
-	"◀️",
-	"▶️",
-	"home",
+	'A',
+	'B',
+	'X',
+	'Y',
+	'LB',
+	'RB',
+	'LT',
+	'RT',
+	'back',
+	'start',
+	'left Stick',
+	'right Stick',
+	'🔼',
+	'🔽',
+	'◀️',
+	'▶️',
+	'home',
 ];
 
 const btnNameProfile: gamePadProfile[] = [
 	{
-		vendorName: "Sony",
+		vendorName: 'Sony',
 		vendor: SONY_VENDOR_ID,
 		buttonNames: [
-			"X",
-			"O",
-			"square",
-			"triangle",
-			"L1",
-			"R1",
-			"L2",
-			"R2",
-			"Share",
-			"Options",
-			"L3",
-			"R3",
-			"🔼",
-			"🔽",
-			"◀️",
-			"▶️",
-			"PS",
-			"Touch",
+			'X',
+			'O',
+			'square',
+			'triangle',
+			'L1',
+			'R1',
+			'L2',
+			'R2',
+			'Share',
+			'Options',
+			'L3',
+			'R3',
+			'🔼',
+			'🔽',
+			'◀️',
+			'▶️',
+			'PS',
+			'Touch',
 		],
 	},
 	{
-		vendorName: "Nintendo",
+		vendorName: 'Nintendo',
 		vendor: NINTENDO_VENDOR_ID,
 		defaultSwapAB: true,
 		buttonNames: [
-			"B",
-			"A",
-			"Y",
-			"X",
-			"L",
-			"R",
-			"ZL",
-			"ZR",
-			"-",
-			"+",
-			"left Stick",
-			"right Stick",
-			"🔼",
-			"🔽",
-			"◀️",
-			"▶️",
-			"home",
-			"share",
+			'B',
+			'A',
+			'Y',
+			'X',
+			'L',
+			'R',
+			'ZL',
+			'ZR',
+			'-',
+			'+',
+			'left Stick',
+			'right Stick',
+			'🔼',
+			'🔽',
+			'◀️',
+			'▶️',
+			'home',
+			'share',
 		],
 	},
 ];
@@ -294,10 +287,7 @@ export function addbtnNameProfile(profile: gamePadProfile) {
 	btnNameProfile.push(profile);
 }
 
-function getSwapAB(
-	vendor: string | undefined,
-	product: string | undefined,
-): boolean {
+function getSwapAB(vendor: string | undefined, product: string | undefined): boolean {
 	if (vendor === NINTENDO_VENDOR_ID) {
 		return true;
 	}
@@ -309,28 +299,26 @@ function getSwapAB(
 		*/
 	return false;
 }
-export const getGamepadProfile = (vendor: string | undefined,
-	product: string | undefined,) => {
+export const getGamepadProfile = (vendor: string | undefined, product: string | undefined) => {
 	let sameVendor: gamepadInfo[] = [];
-	if (vendor === '2dc8') console.log(extraGamepadDB, gamepadDB.length)
+	if (vendor === '2dc8') console.log(extraGamepadDB, gamepadDB.length);
 	for (let info of extraGamepadDB) {
 		if (info.vendor === vendor) {
 			if (!product || info.product === product) {
-				return info
+				return info;
 			}
-			sameVendor.push(info)
+			sameVendor.push(info);
 		}
 	}
 	//
 	if (sameVendor.length === 0 || !product) {
-		return undefined
+		return undefined;
 	}
-	console.log(sameVendor, product)
-	const newSort = sameVendor.sort((p) => OS === p.platform ? 1 : -1)
+	console.log(sameVendor, product);
+	const newSort = sameVendor.sort((p) => (OS === p.platform ? 1 : -1));
 	//console.log(newSort, sameVendor)
-	return newSort[0]
-
-}
+	return newSort[0];
+};
 
 //================================================================
 
@@ -351,8 +339,8 @@ function parseGamepadId(input: string): {
 	if (ffMatch?.length == 4) {
 		return {
 			name: ffMatch![3],
-			vendor: ffMatch![1].padStart(4, "0"),
-			product: ffMatch![2].padStart(4, "0"),
+			vendor: ffMatch![1].padStart(4, '0'),
+			product: ffMatch![2].padStart(4, '0'),
 		};
 	}
 
@@ -367,9 +355,9 @@ function parseGamepadId(input: string): {
 
 	// Return the parsed object, handling cases where a match might not be found
 	return {
-		name: nameMatch ? nameMatch[1] : "",
-		vendor: vendorMatch ? vendorMatch[1] : "",
-		product: productMatch ? productMatch[1] : "",
+		name: nameMatch ? nameMatch[1] : '',
+		vendor: vendorMatch ? vendorMatch[1] : '',
+		product: productMatch ? productMatch[1] : '',
 		//type: typeMatch ? typeMatch[1] : ''
 	};
 }
@@ -377,9 +365,9 @@ function parseGamepadId(input: string): {
 export async function getGamepadInfo(gamepad: Gamepad): Promise<gamepadInfo> {
 	const baseInfo: gamepadInfo = {
 		...parseGamepadId(gamepad.id),
-		standard: gamepad.mapping === "standard",
+		standard: gamepad.mapping === 'standard',
 		buttonNames: SYSTEM_BUTTON_NAME,
-		analogNames: ["leftx", "lefty", "rightx", "righty"],
+		analogNames: ['leftx', 'lefty', 'rightx', 'righty'],
 	};
 	const originInfo = {
 		id: gamepad.id,
@@ -390,16 +378,13 @@ export async function getGamepadInfo(gamepad: Gamepad): Promise<gamepadInfo> {
 	};
 
 	//unstandard
-	if (gamepad.mapping !== "standard") {
-		if (baseInfo.vendor !== "" && baseInfo.product !== "") {
+	if (gamepad.mapping !== 'standard') {
+		if (baseInfo.vendor !== '' && baseInfo.product !== '') {
 			if (gamepadDB.length === 0) {
 				await SDLDB_fetch();
 			}
 			for (let info of extraGamepadDB) {
-				if (
-					info.vendor === baseInfo.vendor &&
-					info.product === baseInfo.product
-				) {
+				if (info.vendor === baseInfo.vendor && info.product === baseInfo.product) {
 					//} && info.platform===OS && info.browser===BROWSER){
 					return { ...info, originInfo };
 				}
@@ -408,19 +393,14 @@ export async function getGamepadInfo(gamepad: Gamepad): Promise<gamepadInfo> {
 			const profile = getGamepadProfile(baseInfo.vendor, baseInfo.product);
 
 			for (let info of gamepadDB) {
-				if (
-					info.vendor === baseInfo.vendor &&
-					info.product === baseInfo.product
-				) {
+				if (info.vendor === baseInfo.vendor && info.product === baseInfo.product) {
 					//unstandard and DB data
-					if (OS != "Windows") {
-						let analogNames: string[] = ["leftx", "lefty", "rightx", "righty"];
+					if (OS != 'Windows') {
+						let analogNames: string[] = ['leftx', 'lefty', 'rightx', 'righty'];
 						let analogPlusNames: string[] = [];
 						let analogMinusNames: string[] = [];
 						const buttonNames: string[] = [...SYSTEM_BUTTON_NAME];
-						const keyMapping: number[] = [
-							0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
-						];
+						const keyMapping: number[] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
 						return {
 							...info,
 							buttonNames,
@@ -440,10 +420,10 @@ export async function getGamepadInfo(gamepad: Gamepad): Promise<gamepadInfo> {
 		const buttonNames: string[] = [];
 		const analogNames: string[] = [];
 		for (let i = 0; i < gamepad.buttons.length; i++) {
-			buttonNames[i] = "button" + (1 + i);
+			buttonNames[i] = 'button' + (1 + i);
 		}
 		for (let i = 0; i < gamepad.axes.length; i++) {
-			analogNames[i] = "axes" + (1 + i);
+			analogNames[i] = 'axes' + (1 + i);
 		}
 		return {
 			...baseInfo,
@@ -461,7 +441,7 @@ export async function getGamepadInfo(gamepad: Gamepad): Promise<gamepadInfo> {
 
 	if (result.buttonNames.length < gamepad.buttons.length) {
 		for (let i = result.buttonNames.length; i < gamepad.buttons.length; i++) {
-			result.buttonNames[i] = "button" + i;
+			result.buttonNames[i] = 'button' + i;
 		}
 	}
 
@@ -478,7 +458,7 @@ function makeDirection(
 	threshold: number,
 	dpad?: dpadPress,
 	leftA?: xy,
-	rightA?: xy,
+	rightA?: xy
 ): Record<directSource, directionWrap | null> {
 	return {
 		leftAnalog: leftA ? getAnalogDirection(leftA, threshold) : null,
@@ -487,11 +467,9 @@ function makeDirection(
 	};
 }
 
-export function getDirectionAvailable(
-	info: gamepadInfo,
-): Record<directSource, boolean> {
+export function getDirectionAvailable(info: gamepadInfo): Record<directSource, boolean> {
 	//standard
-	if (info.originInfo!.mapping == "standard") {
+	if (info.originInfo!.mapping == 'standard') {
 		return {
 			dpad: info.originInfo!.buttons >= 15,
 			leftAnalog: info.originInfo!.axes >= 2,
@@ -501,12 +479,12 @@ export function getDirectionAvailable(
 
 	//non standard
 	let haveTypeSet = new Set<string>();
-	if (info.hatDpad) haveTypeSet.add("dpad");
+	if (info.hatDpad) haveTypeSet.add('dpad');
 	//button
 	for (let i = 0; i < info.originInfo!.buttons; i++) {
 		if (info.buttonNames[i]) {
-			if (info.buttonNames[i]!.substring(0, 2) === "dp") {
-				haveTypeSet.add("dpad");
+			if (info.buttonNames[i]!.substring(0, 2) === 'dp') {
+				haveTypeSet.add('dpad');
 			} else {
 				const valArr = info.buttonNames[i]!.match(lrxyReg);
 				if (valArr) {
@@ -519,7 +497,7 @@ export function getDirectionAvailable(
 	//analog
 	for (let i = 0; i < info.originInfo!.axes; i++) {
 		let analogType = 0;
-		let name = "";
+		let name = '';
 		if (info.analogNames[i] != null) {
 			analogType = 0;
 			name = info.analogNames[i];
@@ -532,8 +510,8 @@ export function getDirectionAvailable(
 		} else {
 			continue;
 		}
-		if (name.substring(0, 2) === "dp") {
-			haveTypeSet.add("dpad");
+		if (name.substring(0, 2) === 'dp') {
+			haveTypeSet.add('dpad');
 		} else {
 			const valArr = name.match(lrxyReg);
 			//const valArr=info.buttonNames[i]!.match(lrxyReg)
@@ -546,41 +524,41 @@ export function getDirectionAvailable(
 
 	//result
 	return {
-		dpad: haveTypeSet.has("dpad"),
-		leftAnalog: haveTypeSet.has("left"),
-		rightAnalog: haveTypeSet.has("right"),
+		dpad: haveTypeSet.has('dpad'),
+		leftAnalog: haveTypeSet.has('left'),
+		rightAnalog: haveTypeSet.has('right'),
 	};
 }
 
 export function getDirection(
 	gamepad: Gamepad,
 	info: gamepadInfo,
-	threshold: number = 0.15,
+	threshold: number = 0.15
 ): Record<directSource, directionWrap | null> {
 	//standard
-	if (gamepad.mapping == "standard") {
+	if (gamepad.mapping == 'standard') {
 		return makeDirection(
 			threshold,
 			gamepad.buttons.length >= 16
 				? {
-					up: gamepad.buttons[12].pressed,
-					down: gamepad.buttons[13].pressed,
-					left: gamepad.buttons[14].pressed,
-					right: gamepad.buttons[15].pressed,
-				}
+						up: gamepad.buttons[12].pressed,
+						down: gamepad.buttons[13].pressed,
+						left: gamepad.buttons[14].pressed,
+						right: gamepad.buttons[15].pressed,
+					}
 				: undefined,
 			gamepad.axes.length >= 2
 				? {
-					x: gamepad.axes[0],
-					y: gamepad.axes[1],
-				}
+						x: gamepad.axes[0],
+						y: gamepad.axes[1],
+					}
 				: undefined,
 			gamepad.axes.length >= 4
 				? {
-					x: gamepad.axes[2],
-					y: gamepad.axes[3],
-				}
-				: undefined,
+						x: gamepad.axes[2],
+						y: gamepad.axes[3],
+					}
+				: undefined
 		);
 	}
 
@@ -599,16 +577,10 @@ export function getDirection(
 	//button
 	for (let i = 0; i < gamepad.buttons.length; i++) {
 		if (info.buttonNames[i]) {
-			if (info.buttonNames[i]!.substring(0, 2) === "dp") {
-				haveTypeSet.add("dpad");
+			if (info.buttonNames[i]!.substring(0, 2) === 'dp') {
+				haveTypeSet.add('dpad');
 				if (gamepad.buttons[i].pressed) {
-					dpad[
-						info.buttonNames[i]!.substring(2) as
-						| "up"
-						| "down"
-						| "left"
-						| "right"
-					] = true;
+					dpad[info.buttonNames[i]!.substring(2) as 'up' | 'down' | 'left' | 'right'] = true;
 				}
 			} else {
 				const valArr = info.buttonNames[i]!.match(lrxyReg);
@@ -616,12 +588,10 @@ export function getDirection(
 					const [, dir, lr, xy] = valArr;
 					haveTypeSet.add(lr);
 					if (gamepad.buttons[i].pressed) {
-						analogRaw[lr as "left" | "right"][xy as "x" | "y"] =
-							dir === "-" ? -1 : dir === "+" ? 1 : 0;
+						analogRaw[lr as 'left' | 'right'][xy as 'x' | 'y'] = dir === '-' ? -1 : dir === '+' ? 1 : 0;
 					} else {
 						const v = gamepad.buttons[i].value;
-						analogRaw[lr as "left" | "right"][xy as "x" | "y"] =
-							dir === "-" ? -v : v;
+						analogRaw[lr as 'left' | 'right'][xy as 'x' | 'y'] = dir === '-' ? -v : v;
 					}
 				}
 			}
@@ -630,32 +600,21 @@ export function getDirection(
 	//analog
 	for (let i = 0; i < gamepad.axes.length; i++) {
 		let analogType = 0;
-		let name = "";
+		let name = '';
 		if (info.analogNames[i] != null) {
 			analogType = 0;
 			name = info.analogNames[i];
-		} else if (
-			info.analogPlusNames &&
-			info.analogPlusNames[i] &&
-			gamepad.axes[i] > 0
-		) {
+		} else if (info.analogPlusNames && info.analogPlusNames[i] && gamepad.axes[i] > 0) {
 			analogType = 1;
 			name = info.analogPlusNames[i];
-		} else if (
-			info.analogMinusNames &&
-			info.analogMinusNames[i] &&
-			gamepad.axes[i] < 0
-		) {
+		} else if (info.analogMinusNames && info.analogMinusNames[i] && gamepad.axes[i] < 0) {
 			analogType = -1;
 			name = info.analogMinusNames[i];
 		} else {
 			if (info.hatDpad) {
-				haveTypeSet.add("dpad");
+				haveTypeSet.add('dpad');
 				const HNum = Math.round(gamepad.axes[i] * 7);
-				if (
-					Math.abs(gamepad.axes[i] * 7 - HNum) < 0.000001 &&
-					HDpadMapping[HNum.toString()]
-				) {
+				if (Math.abs(gamepad.axes[i] * 7 - HNum) < 0.000001 && HDpadMapping[HNum.toString()]) {
 					const v = HDpadMapping[HNum.toString()];
 					for (let key in dpad) {
 						dpad[key as dpad] = (v & info.hatDpad[key as dpad]) > 0;
@@ -665,15 +624,15 @@ export function getDirection(
 
 			continue;
 		}
-		if (name.substring(0, 2) === "dp") {
-			haveTypeSet.add("dpad");
+		if (name.substring(0, 2) === 'dp') {
+			haveTypeSet.add('dpad');
 			if (
 				Math.abs(gamepad.axes[i]) > threshold &&
 				(analogType === 0 ||
 					(gamepad.axes[i] > 0 && analogType === 1) ||
 					(gamepad.axes[i] < 0 && analogType === -1))
 			) {
-				dpad[name.substring(2) as "up" | "down" | "left" | "right"] = true;
+				dpad[name.substring(2) as 'up' | 'down' | 'left' | 'right'] = true;
 			}
 		} else {
 			const valArr = name.match(lrxyReg);
@@ -682,11 +641,10 @@ export function getDirection(
 				haveTypeSet.add(lr);
 				//console.log(name,dir,lr,atype)
 				//if(Math.abs(gamepad.axes[i])<threshold )continue;
-				if (atype == "x" || atype == "y") {
-					analogRaw[lr as "left" | "right"][atype as "x" | "y"] =
-						gamepad.axes[i];
+				if (atype == 'x' || atype == 'y') {
+					analogRaw[lr as 'left' | 'right'][atype as 'x' | 'y'] = gamepad.axes[i];
 					//*(dir==='-'?-1:(dir==='+'?1:0))
-				} else if (atype == "trigger") {
+				} else if (atype == 'trigger') {
 					//*
 				}
 			}
@@ -695,47 +653,36 @@ export function getDirection(
 	//result
 	return makeDirection(
 		threshold,
-		haveTypeSet.has("dpad") ? dpad : undefined,
-		haveTypeSet.has("left") ? analogRaw.left : undefined,
-		haveTypeSet.has("right") ? analogRaw.right : undefined,
+		haveTypeSet.has('dpad') ? dpad : undefined,
+		haveTypeSet.has('left') ? analogRaw.left : undefined,
+		haveTypeSet.has('right') ? analogRaw.right : undefined
 	);
 }
 
-export function getExtraAnalog(
-	gamepad: Gamepad,
-	info: gamepadInfo,
-): Record<string, number> {
+export function getExtraAnalog(gamepad: Gamepad, info: gamepadInfo): Record<string, number> {
 	const result: Record<string, number> = {};
 	for (let i = 0; i < gamepad.axes.length; i++) {
 		let analogType = 0;
-		let name = "";
+		let name = '';
 		if (info.analogNames[i] != null) {
 			analogType = 0;
 			name = info.analogNames[i];
-		} else if (
-			info.analogPlusNames &&
-			info.analogPlusNames[i] &&
-			gamepad.axes[i] > 0
-		) {
+		} else if (info.analogPlusNames && info.analogPlusNames[i] && gamepad.axes[i] > 0) {
 			analogType = 1;
 			name = info.analogPlusNames[i];
-		} else if (
-			info.analogMinusNames &&
-			info.analogMinusNames[i] &&
-			gamepad.axes[i] < 0
-		) {
+		} else if (info.analogMinusNames && info.analogMinusNames[i] && gamepad.axes[i] < 0) {
 			analogType = -1;
 			name = info.analogMinusNames[i];
 		} else {
 			continue;
 		}
-		if (name.substring(0, 2) === "dp") {
+		if (name.substring(0, 2) === 'dp') {
 			continue;
 		} else {
 			const valArr = name.match(lrxyReg);
 			if (valArr) {
 				const [, dir, lr, atype] = valArr;
-				if (atype == "x" || atype == "y") {
+				if (atype == 'x' || atype == 'y') {
 					continue;
 				}
 			}
@@ -757,14 +704,10 @@ export function getRawButtonPress(gamepad:Gamepad):boolean[]{
 }
 */
 
-export function getButtonPress(
-	gamepad: Gamepad,
-	info: gamepadInfo,
-	skipDpad: boolean = false,
-): (boolean | null)[] {
+export function getButtonPress(gamepad: Gamepad, info: gamepadInfo, skipDpad: boolean = false): (boolean | null)[] {
 	const result: (boolean | null)[] = [];
 	for (let i = 0; i < gamepad.buttons.length; i++) {
-		if (gamepad.mapping === "standard") {
+		if (gamepad.mapping === 'standard') {
 			if (!info.buttonNames[i]) {
 				result[i] = null;
 				continue;
@@ -778,13 +721,10 @@ export function getButtonPress(
 			const converToStandKey: number = info.keyMapping?.[i] ?? i;
 			if (!info.buttonNames[i]) {
 				// special case for some SDL mapping not counting trigger as button but analog
-				if (
-					info.buttonNames[5] == "rightshoulder" &&
-					info.buttonNames[8] == "back"
-				) {
+				if (info.buttonNames[5] == 'rightshoulder' && info.buttonNames[8] == 'back') {
 					if (
-						(i == 6 && info.analogNames.indexOf("lefttrigger") >= 0) ||
-						(i == 7 && info.analogNames.indexOf("righttrigger") >= 0)
+						(i == 6 && info.analogNames.indexOf('lefttrigger') >= 0) ||
+						(i == 7 && info.analogNames.indexOf('righttrigger') >= 0)
 					) {
 						result[i] = gamepad.buttons[i].pressed;
 						continue;
@@ -794,7 +734,7 @@ export function getButtonPress(
 				continue;
 			}
 			if (skipDpad) {
-				if (info.buttonNames[i]!.substring(0, 2) === "dp") {
+				if (info.buttonNames[i]!.substring(0, 2) === 'dp') {
 					result[converToStandKey] = null;
 					continue;
 				} else {
@@ -812,14 +752,10 @@ export function getButtonPress(
 	return result;
 }
 
-export function getButtonValue(
-	gamepad: Gamepad,
-	info: gamepadInfo,
-	skipDpad: boolean = false,
-): (number | null)[] {
+export function getButtonValue(gamepad: Gamepad, info: gamepadInfo, skipDpad: boolean = false): (number | null)[] {
 	const result: (number | null)[] = [];
 	for (let i = 0; i < gamepad.buttons.length; i++) {
-		if (gamepad.mapping === "standard") {
+		if (gamepad.mapping === 'standard') {
 			if (!info.buttonNames[i]) {
 				result[i] = null;
 				continue;
@@ -833,13 +769,10 @@ export function getButtonValue(
 			const converToStandKey: number = info.keyMapping?.[i] ?? i;
 			if (!info.buttonNames[i]) {
 				// special case for some SDL mapping not counting trigger as button but analog
-				if (
-					info.buttonNames[5] == "rightshoulder" &&
-					info.buttonNames[8] == "back"
-				) {
+				if (info.buttonNames[5] == 'rightshoulder' && info.buttonNames[8] == 'back') {
 					if (
-						(i == 6 && info.analogNames.indexOf("lefttrigger") >= 0) ||
-						(i == 7 && info.analogNames.indexOf("righttrigger") >= 0)
+						(i == 6 && info.analogNames.indexOf('lefttrigger') >= 0) ||
+						(i == 7 && info.analogNames.indexOf('righttrigger') >= 0)
 					) {
 						result[i] = gamepad.buttons[i].value;
 						continue;
@@ -849,7 +782,7 @@ export function getButtonValue(
 				continue;
 			}
 			if (skipDpad) {
-				if (info.buttonNames[i]!.substring(0, 2) === "dp") {
+				if (info.buttonNames[i]!.substring(0, 2) === 'dp') {
 					result[converToStandKey] = null;
 					continue;
 				} else {
@@ -867,10 +800,7 @@ export function getButtonValue(
 	return result;
 }
 
-export function getButtonName(
-	info: gamepadInfo,
-	rename: boolean = false,
-): (string | null)[] {
+export function getButtonName(info: gamepadInfo, rename: boolean = false): (string | null)[] {
 	const result: (string | null)[] = [];
 
 	//get original name
@@ -880,15 +810,12 @@ export function getButtonName(
 			result[converToStandKey] = info.buttonNames[i];
 
 			// special case for some SDL mapping not counting trigger as button but analog
-		} else if (
-			info.buttonNames[5] == "rightshoulder" &&
-			info.buttonNames[8] == "back"
-		) {
-			if (i == 6 && info.analogNames.indexOf("lefttrigger") >= 0) {
-				result[6] = "lefttrigger";
+		} else if (info.buttonNames[5] == 'rightshoulder' && info.buttonNames[8] == 'back') {
+			if (i == 6 && info.analogNames.indexOf('lefttrigger') >= 0) {
+				result[6] = 'lefttrigger';
 			}
-			if (i == 7 && info.analogNames.indexOf("righttrigger") >= 0) {
-				result[7] = "righttrigger";
+			if (i == 7 && info.analogNames.indexOf('righttrigger') >= 0) {
+				result[7] = 'righttrigger';
 			}
 		}
 	}
@@ -900,10 +827,7 @@ export function getButtonName(
 			newNames = XINPUT_BUTTON_NAME;
 		}
 		for (let profile of btnNameProfile) {
-			if (
-				profile.vendor === info.vendor &&
-				(!profile.product || profile.product === info.product)
-			) {
+			if (profile.vendor === info.vendor && (!profile.product || profile.product === info.product)) {
 				newNames = profile.buttonNames;
 				break;
 			}
