@@ -1,0 +1,38 @@
+{
+  "name": "gamepad_standardizer",
+  "version": "0.0.1",
+  "description": "Standardises gamepad input into a normalised format.",
+  "type": "module",
+  "license": "MIT",
+  "author": "Hocti",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Hocti/gamepad_standardizer.git"
+  },
+  "files": ["dist"],
+  "main": "./dist/index.mjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "unpkg": "./dist/index.iife.js",
+  "jsdelivr": "./dist/index.iife.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "development": "./src/index.ts",
+      "import": "./dist/index.mjs"
+    }
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "clean": "rm -rf dist .turbo"
+  },
+  "devDependencies": {
+    "@mono/config": "workspace:*",
+    "@vitejs/plugin-basic-ssl": "latest",
+    "typescript": "latest",
+    "vite": "latest",
+    "vite-plugin-dts": "latest"
+  }
+}
