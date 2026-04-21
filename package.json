@@ -9,7 +9,9 @@
     "type": "git",
     "url": "git+https://github.com/Hocti/gamepad_standardizer.git"
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "main": "./dist/index.mjs",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
@@ -29,7 +31,7 @@
     "clean": "rm -rf dist .turbo"
   },
   "devDependencies": {
-    "@mono/config": "workspace:*",
+    "@mono/configs": "workspace:*",
     "@vitejs/plugin-basic-ssl": "latest",
     "typescript": "latest",
     "vite": "latest",
