@@ -3,6 +3,16 @@ import basicSsl from '@vitejs/plugin-basic-ssl';
 import dts from 'vite-plugin-dts';
 import repo from "./package.json" assert { type: 'json' };
 
+const compiled = (new Date()).toUTCString().replace(/GMT/g, "UTC");
+const banner = `/*!
+ * ${repo.name} - v${repo.version}
+ * By ${repo.author}
+ * Compiled ${compiled}
+ *
+ * ${repo.name} is licensed under the MIT license.
+ * http://www.opensource.org/licenses/mit-license
+ */`;
+
 export default defineConfig(({ command }) => {
   if (command === 'build') {
     return {
@@ -17,9 +27,11 @@ export default defineConfig(({ command }) => {
           entry: 'src/index.ts',
           name: 'GamepadStandardizer',
           formats: ['es', 'iife'],
-          fileName: (format) => (format === 'es' ? repo.module : repo.unpkg)
+          fileName: (format) => (format === 'es' ? repo.module : repo.unpkg).replace(/^\.\/dist\//, '')
         },
-        sourcemap: true,
+        rollupOptions: {
+          output: { banner: () => banner }
+        },
         emptyOutDir: true
       }
     };

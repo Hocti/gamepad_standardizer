@@ -1,6 +1,6 @@
 {
   "name": "gamepad_standardizer",
-  "version": "0.0.1",
+  "version": "2.0.1",
   "description": "Standardises gamepad input into a normalised format.",
   "type": "module",
   "license": "MIT",
@@ -9,27 +9,32 @@
     "type": "git",
     "url": "git+https://github.com/Hocti/gamepad_standardizer.git"
   },
-  "files": [
-    "dist"
-  ],
-  "main": "./dist/index.mjs",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
-  "unpkg": "./dist/index.iife.js",
-  "jsdelivr": "./dist/index.iife.js",
+  "main": "./dist/gamepadStandardizer.mjs",
+  "module": "./dist/gamepadStandardizer.mjs",
+  "types": "./dist/gamepadStandardizer.d.ts",
+  "unpkg": "./dist/gamepadStandardizer.js",
+  "jsdelivr": "./dist/gamepadStandardizer.js",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
+      "types": "./dist/gamepadStandardizer.d.ts",
       "development": "./src/index.ts",
-      "import": "./dist/index.mjs"
+      "import": "./dist/gamepadStandardizer.mjs"
     }
   },
+  "files": [
+    "dist",
+    "LICENSE",
+    "package.json",
+    "README.md"
+  ],
+  "readme": "README.md",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist .turbo"
   },
+  "prettier": "@mono/configs/prettier.json",
   "devDependencies": {
     "@mono/configs": "workspace:*",
     "@vitejs/plugin-basic-ssl": "latest",

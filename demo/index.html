@@ -1,11 +1,37 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <title>gamepad_standardizer demo</title>
-  </head>
-  <body>
-    <pre id="out">loading...</pre>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo</title>
+    <style>
+        table {
+            margin: 10px;
+            border: 2px solid black;
+            display: inline-block;
+        }
+
+        td {
+            border: 1px solid black;
+        }
+
+        td:nth-last-child(1) {
+            width: 100px;
+            text-overflow: ellipsis;
+            overflow: hidden;
+            display: block;
+
+        }
+
+        td.true {
+            background-color: yellow;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="output">Press any key on gamepad</div>
     <script type="module" src="./main.ts"></script>
   </body>
 </html>
