@@ -32,14 +32,19 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
+    "build:db": "tsx scripts/build-db.mts",
     "clean": "rm -rf dist .turbo"
   },
-  "prettier": "@mono/configs/prettier.json",
   "devDependencies": {
     "@mono/configs": "workspace:*",
     "@vitejs/plugin-basic-ssl": "latest",
+    "happy-dom": "^20.11.1",
+    "tsx": "^4.23.1",
     "typescript": "latest",
     "vite": "latest",
-    "vite-plugin-dts": "latest"
+    "vite-plugin-dts": "latest",
+    "vitest": "^4.1.10"
   }
 }

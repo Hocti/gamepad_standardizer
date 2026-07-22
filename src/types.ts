@@ -1,4 +1,4 @@
-import { dpad } from './direction';
+import { dpad, directionWrap, dpadPress, xy } from './direction';
 
 export type gamepadInfo = {
 	name: string;
@@ -39,3 +39,10 @@ export enum directSource {
 	leftAnalog = 'leftAnalog',
 	rightAnalog = 'rightAnalog',
 }
+
+// PascalCase aliases (preferred going forward). Legacy lowerCamelCase names kept as-is.
+export type GamepadInfo = gamepadInfo;
+export type GamePadProfile = gamePadProfile;
+export type DirectionWrap = directionWrap;
+export type DpadPress = dpadPress;
+export type XY = xy;

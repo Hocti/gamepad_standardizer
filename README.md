@@ -74,6 +74,30 @@ console.log(gamepad_standardizer)
 
 ## Usage
 
+### Configuring the SDL DB source (optional)
+
+The SDL controller DB is only loaded **lazily** — the very first time a *non-standard* controller
+connects. Standard / xinput controllers never trigger a DB load. Choose where the DB comes from
+with `configureDB`:
+
+```javascript
+import { configureDB } from 'gamepad_standardizer';
+
+// Default (no call needed): fetch from GitHub raw, cached in localStorage.
+configureDB({ mode: 'fetch' });
+
+// Fetch from your own mirror, optionally disable the cache:
+configureDB({ mode: 'fetch', url: './gamecontrollerdb.txt', cacheKey: false });
+
+// No runtime network request — use the per-platform DB bundled inside the package:
+configureDB({ mode: 'bundled' });
+
+// Provide your own SDL text directly:
+configureDB({ mode: 'custom', text: mySDLText });
+```
+
+> `SDLDB_setLink()` / `SDLDB_fetch()` still work but are **deprecated** — prefer `configureDB`.
+
 ### Getting Gamepad Information
 
 Retrieve information about a connected gamepad:
@@ -103,7 +127,8 @@ console.log(buttonPresses);
 
 ## API Reference
 
-- `SDLDB_setLink(link: string)`: Sets the link to the SDL database, defaul is SDL_GameControllerDB's github link
+- `configureDB(config)`: Choose the SDL DB source — `{ mode: 'fetch' | 'bundled' | 'custom', … }` (see Usage above). Preferred over `SDLDB_setLink`.
+- `SDLDB_setLink(link: string)`: **@deprecated** — sets the fetch link for the SDL database (now forwards to `configureDB({ mode: 'fetch', url })`).
 - `getGamepadInfo(gamepad: Gamepad)`: Returns information about the connected gamepad.
 - `getDirectionAvailable(gamepad: Gamepad, info: gamepadInfo)`: Checks the availability of directional inputs.
 - `getDirection(gamepad: Gamepad, info: gamepadInfo, threshold?: number)`: Gets the status of directional inputs, threshold default is 0.1

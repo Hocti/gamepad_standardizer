@@ -1,170 +1,49 @@
 import { gamepadInfo, gamePadProfile, directSource } from './types';
-import { HDpadMapping, SYSTEM_BUTTON_NAME, oppositeDpad } from './config';
+import { HDpadMapping, SYSTEM_BUTTON_NAME } from './config';
 import { dpad, xy, dpadPress, directionWrap, getAnalogDirection, getDpadDirection } from './direction';
+import { parseSDLDict, parseSDLText } from './sdlParse';
+import { configureDB, ensureDB, currentPlatform } from './dbSource';
 
 //from SDL DB================================================================
 
-const OS: string = (function detectOS() {
-	const userAgent = window.navigator.userAgent;
-	const platform = window.navigator.platform;
-	const macosPlatforms = ['Macintosh', 'MacIntel', 'MacPPC', 'Mac68K'];
-	const windowsPlatforms = ['Win32', 'Win64', 'Windows', 'WinCE'];
-	const iosPlatforms = ['iPhone', 'iPad', 'iPod'];
+const OS: string = currentPlatform();
 
-	if (macosPlatforms.indexOf(platform) !== -1) {
-		return 'Mac OS X';
-	} else if (iosPlatforms.indexOf(platform) !== -1) {
-		return 'iOS';
-	} else if (windowsPlatforms.indexOf(platform) !== -1) {
-		return 'Windows';
-	} else if (/Android/.test(userAgent)) {
-		return 'Android';
-	} else if (/Linux/.test(platform)) {
-		return 'Linux';
-	}
-
-	return '';
-})();
-
+// Manual additions merged into the DB search on top of the lazily-loaded source
+// (see ensureDB). Populated by the back-compat SDLDB_processText below.
 let gamepadDB: gamepadInfo[] = [];
-let gamePadDBLink = `https://raw.githubusercontent.com/gabomdq/SDL_GameControllerDB/master/gamecontrollerdb.txt`;
 
+/**
+ * @deprecated use `configureDB({ mode: 'fetch', url })` instead.
+ * Kept for back-compat: sets the fetch URL for the runtime SDL DB source.
+ */
 export function SDLDB_setLink(link: string): void {
-	gamePadDBLink = link;
+	configureDB({ mode: 'fetch', url: link });
 }
 
-export async function SDLDB_fetch(_dbtxtlink: string = gamePadDBLink) {
-	await fetch(_dbtxtlink)
-		.then((res) => res.text())
-		.then(SDLDB_processText);
+/**
+ * @deprecated use `configureDB(...)` + rely on lazy `ensureDB()` (triggered when a
+ * non-standard controller connects). Kept for back-compat: eagerly loads the DB now.
+ */
+export async function SDLDB_fetch(link?: string) {
+	if (link) configureDB({ mode: 'fetch', url: link });
+	await ensureDB();
 }
 
-const lineReg = /^([^a-z0-9]{0,1})([a-z]{1})([\d.]{1,3})([^a-z0-9]{0,1})$/;
+/**
+ * Manually add SDL DB entries on top of the lazily-loaded source ("加料").
+ * The lazily-loaded DB (see {@link ensureDB}) is the primary source; entries added
+ * here are merged into the search in {@link getGamepadInfo}.
+ */
 export function SDLDB_processText(text: string): void {
-	let lines = text.split('\n');
-
-	//let bKeySet:Set<string>=new Set();
-
-	for (let line of lines) {
-		if (line.startsWith('#')) continue;
-		let arr = line.split(',');
-
-		const guid = arr[0];
-		if (guid.length !== 32) continue;
-		const vendor = guid.substring(10, 12) + guid.substring(8, 10);
-		const product = guid.substring(18, 20) + guid.substring(16, 18);
-		const name = arr[1];
-
-		const data: Record<string, string> = {};
-		for (let i = 2, t = arr.length - 1; i < t; i++) {
-			const [key, value] = arr[i].split(':');
-			data[key] = value;
-		}
-
-		if (OS !== '' && data['platform'] != OS) continue;
-		//if(data['platform']!='Windows')continue;
-
-		const result = SDLDB_processDict(data, guid);
-
-		gamepadDB.push({
-			name,
-			guid,
-			vendor,
-			product,
-			...result,
-			defaultSwapAB: getSwapAB(vendor, product),
-		});
+	for (const info of parseSDLText(text, OS !== '' ? OS : undefined)) {
+		gamepadDB.push({ ...info, defaultSwapAB: getSwapAB(info.vendor, info.product) });
 	}
-
-	console.log('asdasd', gamepadDB.length);
-	//console.log(bKeySet)
-}
-
-function SDLDB_processDict(
-	data: Record<string, string>,
-	guid: string = ''
-): {
-	standard: boolean;
-	buttonNames: string[];
-	keyMapping: number[];
-	hatDpad: Record<dpad, number> | undefined;
-	analogNames: string[];
-	analogPlusNames: string[];
-	analogMinusNames: string[];
-} {
-	const buttonNames: string[] = [];
-	const analogNames: string[] = [];
-	const analogPlusNames: string[] = [];
-	const analogMinusNames: string[] = [];
-	const keyMapping: number[] = [];
-	let hatDpad: Record<dpad, number> | undefined;
-
-	for (const key in data) {
-		if (key === 'platform') continue;
-		const value = data[key];
-
-		const valArr = value.match(lineReg);
-		if (!valArr || valArr.length < 5) {
-			continue;
-		}
-		const [, start, type, , end] = valArr;
-		//  +/-,a/b/h,0~n/0.2~0.8,~
-		const num = parseInt(valArr[3]);
-
-		if (type === 'b') {
-			//button
-			buttonNames[num] = key;
-			const defautIndex = SYSTEM_BUTTON_NAME.indexOf(key);
-			if (defautIndex !== -1 && defautIndex !== num) {
-				keyMapping[num] = defautIndex;
-			}
-			//bKeySet.add(key);
-		} else if (type === 'a') {
-			//analog
-			//bKeySet.add(key);
-			if (start == '') {
-				analogNames[num] = key;
-			} else if (start !== '') {
-				if (start == '+') {
-					analogPlusNames[num] = key;
-					//bKeySet.add(key);
-				} else {
-					analogMinusNames[num] = key;
-					//bKeySet.add(key);
-				}
-			}
-		} else if (type === 'h') {
-			//SDL hat to Dpad
-			if (!hatDpad) {
-				hatDpad = { up: 0, down: 0, left: 0, right: 0 };
-			}
-			const [hat, hatval] = valArr[3].split('.');
-			if (hatval) {
-				if (key.substring(0, 2) === 'dp') {
-					hatDpad[key.substring(2) as dpad] = parseInt(hatval);
-				} else {
-					//*
-				}
-			}
-		}
-	}
-
-	return {
-		standard: false,
-		buttonNames,
-		keyMapping,
-		hatDpad,
-		analogNames,
-		analogPlusNames,
-		analogMinusNames,
-	};
 }
 
 const extraGamepadDB: gamepadInfo[] = [];
 //platform:asdf,browser:asdf,name:asdf,vendor:asdf,product:asdf,a:b0...
 export function SDLDB_procesExtraText(text: string): void {
 	let lines = text.split('\n');
-	console.log('SDLDB_procesExtraText', lines.length);
 	for (let line of lines) {
 		let arr = line.split(',');
 		const data: Record<string, string> = {};
@@ -182,7 +61,7 @@ export function SDLDB_procesExtraText(text: string): void {
 		const buttonNames = data['buttonNames']?.split('|');
 		const defaultSwapAB = data['defaultSwapAB'] ? true : false;
 
-		const result = SDLDB_processDict(data);
+		const result = parseSDLDict(data);
 
 		extraGamepadDB.push({
 			platform,
@@ -301,7 +180,6 @@ function getSwapAB(vendor: string | undefined, product: string | undefined): boo
 }
 export const getGamepadProfile = (vendor: string | undefined, product: string | undefined) => {
 	let sameVendor: gamepadInfo[] = [];
-	if (vendor === '2dc8') console.log(extraGamepadDB, gamepadDB.length);
 	for (let info of extraGamepadDB) {
 		if (info.vendor === vendor) {
 			if (!product || info.product === product) {
@@ -314,9 +192,8 @@ export const getGamepadProfile = (vendor: string | undefined, product: string | 
 	if (sameVendor.length === 0 || !product) {
 		return undefined;
 	}
-	console.log(sameVendor, product);
-	const newSort = sameVendor.sort((p) => (OS === p.platform ? 1 : -1));
-	//console.log(newSort, sameVendor)
+	// B3: proper 2-arg comparator — entries on the current platform sort first.
+	const newSort = sameVendor.sort((a, b) => (b.platform === OS ? 1 : 0) - (a.platform === OS ? 1 : 0));
 	return newSort[0];
 };
 
@@ -380,9 +257,8 @@ export async function getGamepadInfo(gamepad: Gamepad): Promise<gamepadInfo> {
 	//unstandard
 	if (gamepad.mapping !== 'standard') {
 		if (baseInfo.vendor !== '' && baseInfo.product !== '') {
-			if (gamepadDB.length === 0) {
-				await SDLDB_fetch();
-			}
+			// Lazy: only non-standard controllers reach here → DB loads on demand.
+			const db = gamepadDB.length ? [...(await ensureDB()), ...gamepadDB] : await ensureDB();
 			for (let info of extraGamepadDB) {
 				if (info.vendor === baseInfo.vendor && info.product === baseInfo.product) {
 					//} && info.platform===OS && info.browser===BROWSER){
@@ -390,9 +266,7 @@ export async function getGamepadInfo(gamepad: Gamepad): Promise<gamepadInfo> {
 				}
 			}
 
-			const profile = getGamepadProfile(baseInfo.vendor, baseInfo.product);
-
-			for (let info of gamepadDB) {
+			for (let info of db) {
 				if (info.vendor === baseInfo.vendor && info.product === baseInfo.product) {
 					//unstandard and DB data
 					if (OS != 'Windows') {
@@ -639,7 +513,6 @@ export function getDirection(
 			if (valArr) {
 				const [, dir, lr, atype] = valArr;
 				haveTypeSet.add(lr);
-				//console.log(name,dir,lr,atype)
 				//if(Math.abs(gamepad.axes[i])<threshold )continue;
 				if (atype == 'x' || atype == 'y') {
 					analogRaw[lr as 'left' | 'right'][atype as 'x' | 'y'] = gamepad.axes[i];

@@ -1,7 +1,9 @@
+/// <reference types="vitest/config" />
 import { defineConfig } from 'vite';
 import basicSsl from '@vitejs/plugin-basic-ssl';
 import dts from 'vite-plugin-dts';
-import repo from "./package.json" assert { type: 'json' };
+import { vitestBase } from '@mono/configs/vitest.base';
+import repo from "./package.json" with { type: 'json' };
 
 const compiled = (new Date()).toUTCString().replace(/GMT/g, "UTC");
 const banner = `/*!
@@ -13,7 +15,11 @@ const banner = `/*!
  * http://www.opensource.org/licenses/mit-license
  */`;
 
-export default defineConfig(({ command }) => {
+export default defineConfig(({ command, mode }) => {
+  if (mode === 'test' || process.env.VITEST) {
+    return { test: vitestBase };
+  }
+
   if (command === 'build') {
     return {
       plugins: [
@@ -39,7 +45,7 @@ export default defineConfig(({ command }) => {
 
   return {
     root: 'demo',
-    server: { https: true, port: 5174 },
+    server: { https: {}, port: 5174 },
     plugins: [basicSsl()]
   };
 });

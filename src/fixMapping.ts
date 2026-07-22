@@ -3,7 +3,7 @@ import { HDpadMapping, oppositeDpad, SYSTEM_BUTTON_NAME } from './config';
 
 export function fixhatDpad(up_HNum: number, left_HNum: number): Record<dpad, number> {
 	const up_HNum_str = up_HNum.toString();
-	const left_HNum_str = up_HNum.toString();
+	const left_HNum_str = left_HNum.toString();
 	return {
 		up: HDpadMapping[up_HNum_str],
 		down: HDpadMapping[oppositeDpad[up_HNum_str]],
@@ -65,7 +65,7 @@ export function fixAnalog(
 			result.analogMinusNames = analogMinusNames;
 		}
 		if (analogPlusNames.length > 0) {
-			result.analogPlusNames = analogMinusNames;
+			result.analogPlusNames = analogPlusNames;
 		}
 	} else if (dpad_hat) {
 		result.hatDpad = fixhatDpad(dpad_hat.up_HNum, dpad_hat.left_HNum);
