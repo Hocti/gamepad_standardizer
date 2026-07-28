@@ -1,15 +1,15 @@
-export enum dpad {
+export enum Dpad {
 	up = 'up',
 	down = 'down',
 	left = 'left',
 	right = 'right',
 }
 
-export type xy = { x: number; y: number };
-export type dpadPress = Record<dpad, boolean>;
+export type XY = { x: number; y: number };
+export type DpadPress = Record<Dpad, boolean>;
 
-export type directionWrap = dpadPress &
-	xy & {
+export type DirectionWrap = DpadPress &
+	XY & {
 		numpad: number; //1~9 int
 		radian: number; //0~2pi
 		degree: number; //0~359 int
@@ -20,7 +20,7 @@ export type directionWrap = dpadPress &
 const numpad2Degree = [0, 225, 180, 135, 270, 0, 90, 315, 0, 45];
 const toDpadThreshold: number = Math.tan(Math.PI / 8);
 
-export function getAnalogDirection(d: xy, threshold: number): directionWrap {
+export function getAnalogDirection(d: XY, threshold: number): DirectionWrap {
 	const { x, y } = d;
 	const distanceRaw = Math.sqrt(x * x + y * y);
 
@@ -52,7 +52,7 @@ export function getAnalogDirection(d: xy, threshold: number): directionWrap {
 
 const fixed6 = (n: number) => Math.round(n * 1000000) / 1000000;
 
-export function getDpadDirection(d: dpadPress): directionWrap {
+export function getDpadDirection(d: DpadPress): DirectionWrap {
 	const numpad = dpadPress2Numpad(d);
 	return {
 		...d,
@@ -66,6 +66,6 @@ export function getDpadDirection(d: dpadPress): directionWrap {
 	};
 }
 
-function dpadPress2Numpad(d: dpadPress): number {
+function dpadPress2Numpad(d: DpadPress): number {
 	return 5 + (d.up ? 3 : d.down ? -3 : 0) + (d.left ? -1 : d.right ? 1 : 0);
 }

@@ -1,7 +1,9 @@
-// Pins the hand-edited override format in db/local_override.txt. The whole point of that
+// Pins the hand-edited override format in src/db/local_override.txt. The whole point of that
 // file is to rescue a pad the browser maps wrongly, so a typo silently parsing to nothing
 // would be the worst failure mode — these tests make the format executable documentation.
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { parseLocalOverrides } from '../src/localOverride';
 import { SYSTEM_BUTTON_NAME } from '../src/config';
 
@@ -58,49 +60,157 @@ describe('local controller overrides', () => {
 		expect(e.hatDpad!.up).toBe(1);
 		expect(e.hatDpad!.down).toBe(4);
 	});
+});
 
-	it('ships with no active entries until one is added', async () => {
-		// Guards the shipped default: the file must contain only comments, so nobody
-		// inherits a stray mapping. Delete/adjust this when a real entry is committed.
-		const { LOCAL_OVERRIDE_TEXT } = await import('../src/db/local_override');
-		expect(parseLocalOverrides(LOCAL_OVERRIDE_TEXT, 'Linux')).toHaveLength(0);
+// The shipped .txt is an external file users edit by hand, so it is not type-checked by anything.
+// Parsing it here is the only guard against a committed typo becoming a silent no-op.
+describe('the shipped default .txt', () => {
+	// Read off cwd (the package root): under happy-dom, import.meta.url is an http: URL.
+	const text = readFileSync(resolve(process.cwd(), 'src/db/local_override.txt'), 'utf8');
+
+	it('parses without dropping its entries', () => {
+		const linux = parseLocalOverrides(text, 'Linux');
+		// Every non-comment, non-blank line must survive the parser.
+		const lines = text.split('\n').filter((l) => l.trim() !== '' && !l.trim().startsWith('#'));
+		const pinnedElsewhere = lines.filter((l) => /(^|,)\s*platform:(?!Linux\b)/.test(l));
+		expect(linux).toHaveLength(lines.length - pinnedElsewhere.length);
+	});
+
+	it('ships the 8BitDo Ultimate 2 Wireless Linux entry', () => {
+		const e = parseLocalOverrides(text, 'Linux').find((x) => x.vendor === '2dc8' && x.product === '310b');
+		expect(e).toBeDefined();
+		expect(e!.buttonNames[7]).toBe('start');
+		expect(e!.analogMinusNames?.[7]).toBe('dpup');
+		expect(e!.analogPlusNames?.[7]).toBe('dpdown');
+	});
+
+	it('is not applied on a platform the entry is not pinned to', () => {
+		expect(parseLocalOverrides(text, 'Windows').find((x) => x.product === '310b')).toBeUndefined();
 	});
 });
 
-// The reason this feature exists: a pad the browser reports as `mapping: "standard"` while
-// decoding it wrongly. The SDL DB is unreachable for such a pad, so unless the override is
-// consulted *before* that check it can never take effect — the exact silent no-op this
-// guards against.
-describe('override beats a wrong "standard" claim', () => {
-	const fakePad = (id: string): Gamepad =>
+// The lazy contract, which is the reason overrides live in a fetched .txt at all: a pad the
+// browser calls "standard" must not cost a network request. Overrides therefore only apply on
+// the non-standard path — checked there before the SDL DB, so they still beat every DB source.
+describe('lazy contract + priority', () => {
+	const fakePad = (id: string, mapping: string): Gamepad =>
 		({
 			id,
 			index: 0,
-			mapping: 'standard',
+			mapping,
 			connected: true,
 			timestamp: 0,
 			axes: [0, 0, 0, 0],
 			buttons: Array.from({ length: 17 }, () => ({ pressed: false, touched: false, value: 0 })),
 		}) as unknown as Gamepad;
 
-	it('uses the override for a pad claiming the standard mapping', async () => {
-		const { addLocalOverrides } = await import('../src/localOverride');
+	beforeEach(async () => {
+		const { configureLocalOverrides } = await import('../src/localOverride');
+		configureLocalOverrides({ includeDefault: false });
+	});
+
+	it('fetches no .txt for a pad claiming the standard mapping', async () => {
+		const { configureLocalOverrides } = await import('../src/localOverride');
 		const { getGamepadInfo } = await import('../src/gamepad_standardizer');
 
-		addLocalOverrides('name:Probe,vendor:2dc8,product:310b,start:b7,dpup:b12,dpdown:b13');
-		const info = await getGamepadInfo(fakePad('Probe Pad (STANDARD GAMEPAD Vendor: 2dc8 Product: 310b)'));
+		const fetched: string[] = [];
+		const realFetch = globalThis.fetch;
+		globalThis.fetch = (async (input: RequestInfo | URL) => {
+			fetched.push(String(input));
+			return new Response('');
+		}) as typeof fetch;
 
+		try {
+			configureLocalOverrides({ urls: ['./extra-pads.txt'] }); // default + an app file
+			const info = await getGamepadInfo(
+				fakePad('Probe Pad (STANDARD GAMEPAD Vendor: 2dc8 Product: 310b)', 'standard')
+			);
+			expect(info.standard).toBe(true);
+			expect(fetched).toEqual([]);
+		} finally {
+			globalThis.fetch = realFetch;
+		}
+	});
+
+	it('fetches every source once for a non-standard pad', async () => {
+		const { configureLocalOverrides, ensureLocalOverrides } = await import('../src/localOverride');
+
+		const fetched: string[] = [];
+		const realFetch = globalThis.fetch;
+		globalThis.fetch = (async (input: RequestInfo | URL) => {
+			fetched.push(String(input));
+			return new Response('');
+		}) as typeof fetch;
+
+		try {
+			configureLocalOverrides({ includeDefault: false, urls: ['./a.txt', './b.txt'] });
+			await ensureLocalOverrides();
+			await ensureLocalOverrides(); // idempotent — must not re-fetch
+			expect(fetched).toEqual(['./a.txt', './b.txt']);
+		} finally {
+			globalThis.fetch = realFetch;
+		}
+	});
+
+	it('applies the override for a non-standard pad, ahead of the SDL DB', async () => {
+		const { addLocalOverrides } = await import('../src/localOverride');
+		const { configureDB } = await import('../src/dbSource');
+		const { getGamepadInfo } = await import('../src/gamepad_standardizer');
+
+		// An SDL line for the same pad — the override must win over it.
+		configureDB({ mode: 'custom', text: '03000000c82d00000b31000000000000,From SDL,platform:Linux,a:b1,\n' });
+		addLocalOverrides('name:Probe,vendor:2dc8,product:310b,start:b7,dpup:b12,dpdown:b13');
+
+		const info = await getGamepadInfo(fakePad('Probe Pad (Vendor: 2dc8 Product: 310b)', ''));
 		expect(info.name).toBe('Probe');
 		expect(info.buttonNames[7]).toBe('start');
 		expect(info.buttonNames[12]).toBe('dpup');
 		expect(info.buttonNames[13]).toBe('dpdown');
-		expect(info.originInfo?.mapping).toBe('standard');
+		expect(info.originInfo?.mapping).toBe('');
 	});
 
-	it('leaves an unlisted standard pad on the normal path', async () => {
-		const { getGamepadInfo } = await import('../src/gamepad_standardizer');
-		const info = await getGamepadInfo(fakePad('Other Pad (STANDARD GAMEPAD Vendor: 045e Product: 028e)'));
-		expect(info.standard).toBe(true);
-		expect(info.name).toBe('Other Pad');
+	it('lets a later source win over an earlier one', async () => {
+		const { addLocalOverrides, localOverrideFor } = await import('../src/localOverride');
+
+		addLocalOverrides('name:First,vendor:2dc8,product:310b,a:b0');
+		addLocalOverrides('name:Second,vendor:2dc8,product:310b,a:b0');
+
+		expect((await localOverrideFor('2dc8', '310b'))?.name).toBe('Second');
+	});
+
+	it('reports an unreachable .txt as "no overrides" instead of throwing', async () => {
+		const { configureLocalOverrides, localOverrideCount } = await import('../src/localOverride');
+
+		const realFetch = globalThis.fetch;
+		const realWarn = console.warn;
+		globalThis.fetch = (async () => {
+			throw new Error('offline');
+		}) as typeof fetch;
+		console.warn = () => {}; // the warning is the expected behaviour, not test output
+
+		try {
+			configureLocalOverrides({ includeDefault: false, urls: ['./nope.txt'] });
+			await expect(localOverrideCount()).resolves.toBe(0);
+		} finally {
+			globalThis.fetch = realFetch;
+			console.warn = realWarn;
+		}
+	});
+
+	it('reports a 404 .txt as "no overrides" instead of throwing', async () => {
+		const { configureLocalOverrides, localOverrideCount } = await import('../src/localOverride');
+
+		const realFetch = globalThis.fetch;
+		const realWarn = console.warn;
+		globalThis.fetch = (async () => new Response('Not Found', { status: 404 })) as typeof fetch;
+		console.warn = () => {};
+
+		try {
+			configureLocalOverrides({ includeDefault: false, urls: ['./nope.txt'] });
+			await expect(localOverrideCount()).resolves.toBe(0);
+		} finally {
+			globalThis.fetch = realFetch;
+			console.warn = realWarn;
+		}
 	});
 });

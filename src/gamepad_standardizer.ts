@@ -1,7 +1,7 @@
-import { gamepadInfo, directSource } from './types';
+import { GamepadInfo, DirectSource } from './types';
 import { addPadFontProfile } from './glyphs';
 import { HDpadMapping, SYSTEM_BUTTON_NAME } from './config';
-import { dpad, xy, dpadPress, directionWrap, getAnalogDirection, getDpadDirection } from './direction';
+import { Dpad, XY, DpadPress, DirectionWrap, getAnalogDirection, getDpadDirection } from './direction';
 import { parseSDLDict, parseSDLText } from './sdlParse';
 import { configureDB, ensureDB, currentPlatform } from './dbSource';
 import { localOverrideFor } from './localOverride';
@@ -12,7 +12,7 @@ const OS: string = currentPlatform();
 
 // Manual additions merged into the DB search on top of the lazily-loaded source
 // (see ensureDB). Populated by the back-compat SDLDB_processText below.
-let gamepadDB: gamepadInfo[] = [];
+let gamepadDB: GamepadInfo[] = [];
 
 /**
  * @deprecated use `configureDB({ mode: 'fetch', url })` instead.
@@ -42,7 +42,7 @@ export function SDLDB_processText(text: string): void {
 	}
 }
 
-const extraGamepadDB: gamepadInfo[] = [];
+const extraGamepadDB: GamepadInfo[] = [];
 //platform:asdf,browser:asdf,name:asdf,vendor:asdf,product:asdf,font:switch,a:b0...
 //`font` is optional and picks the glyph artwork (xbox|playstation|switch); it replaces
 //the old `buttonNames:A|B|C` field, since button *names* no longer vary by vendor.
@@ -103,7 +103,7 @@ function getSwapAB(vendor: string | undefined, product: string | undefined): boo
 	return false;
 }
 export const getGamepadProfile = (vendor: string | undefined, product: string | undefined) => {
-	let sameVendor: gamepadInfo[] = [];
+	let sameVendor: GamepadInfo[] = [];
 	for (let info of extraGamepadDB) {
 		if (info.vendor === vendor) {
 			if (!product || info.product === product) {
@@ -163,8 +163,8 @@ function parseGamepadId(input: string): {
 	};
 }
 
-export async function getGamepadInfo(gamepad: Gamepad): Promise<gamepadInfo> {
-	const baseInfo: gamepadInfo = {
+export async function getGamepadInfo(gamepad: Gamepad): Promise<GamepadInfo> {
+	const baseInfo: GamepadInfo = {
 		...parseGamepadId(gamepad.id),
 		standard: gamepad.mapping === 'standard',
 		buttonNames: SYSTEM_BUTTON_NAME,
@@ -178,16 +178,14 @@ export async function getGamepadInfo(gamepad: Gamepad): Promise<gamepadInfo> {
 		mapping: gamepad.mapping,
 	};
 
-	// Hand-written override wins over every other source, including the browser's own
-	// `mapping: "standard"` claim — a pad only needs an entry here *because* that claim is
-	// wrong for it (see db/local_override.ts). Checked before the branch below so a
-	// mis-standardised pad is reachable at all; the SDL DB never is, for a standard pad.
-	const override = localOverrideFor(baseInfo.vendor, baseInfo.product);
-	if (override) return { ...override, originInfo };
-
 	//unstandard
 	if (gamepad.mapping !== 'standard') {
 		if (baseInfo.vendor !== '' && baseInfo.product !== '') {
+			// Hand-written overrides win over every DB source. Lazy, like the SDL DB below: only a
+			// non-standard controller reaches here, so a standard pad never fetches the .txt files.
+			const override = await localOverrideFor(baseInfo.vendor, baseInfo.product);
+			if (override) return { ...override, originInfo };
+
 			// Lazy: only non-standard controllers reach here → DB loads on demand.
 			const db = gamepadDB.length ? [...(await ensureDB()), ...gamepadDB] : await ensureDB();
 			for (let info of extraGamepadDB) {
@@ -239,7 +237,7 @@ export async function getGamepadInfo(gamepad: Gamepad): Promise<gamepadInfo> {
 		};
 	}
 
-	let result: gamepadInfo = {
+	let result: GamepadInfo = {
 		...baseInfo,
 		originInfo,
 	};
@@ -261,10 +259,10 @@ const lrxyReg = /^([+|-])?(left|right)(x|y|trigger)$/;
 
 function makeDirection(
 	threshold: number,
-	dpad?: dpadPress,
-	leftA?: xy,
-	rightA?: xy
-): Record<directSource, directionWrap | null> {
+	dpad?: DpadPress,
+	leftA?: XY,
+	rightA?: XY
+): Record<DirectSource, DirectionWrap | null> {
 	return {
 		leftAnalog: leftA ? getAnalogDirection(leftA, threshold) : null,
 		rightAnalog: rightA ? getAnalogDirection(rightA, threshold) : null,
@@ -272,7 +270,7 @@ function makeDirection(
 	};
 }
 
-export function getDirectionAvailable(info: gamepadInfo): Record<directSource, boolean> {
+export function getDirectionAvailable(info: GamepadInfo): Record<DirectSource, boolean> {
 	//standard
 	if (info.originInfo!.mapping == 'standard') {
 		return {
@@ -337,9 +335,9 @@ export function getDirectionAvailable(info: gamepadInfo): Record<directSource, b
 
 export function getDirection(
 	gamepad: Gamepad,
-	info: gamepadInfo,
+	info: GamepadInfo,
 	threshold: number = 0.15
-): Record<directSource, directionWrap | null> {
+): Record<DirectSource, DirectionWrap | null> {
 	//standard
 	if (gamepad.mapping == 'standard') {
 		return makeDirection(
@@ -368,13 +366,13 @@ export function getDirection(
 	}
 
 	//non standard
-	let dpad: dpadPress = {
+	let dpad: DpadPress = {
 		up: false,
 		down: false,
 		left: false,
 		right: false,
 	};
-	let analogRaw: { left: xy; right: xy } = {
+	let analogRaw: { left: XY; right: XY } = {
 		left: { x: 0, y: 0 },
 		right: { x: 0, y: 0 },
 	};
@@ -422,7 +420,7 @@ export function getDirection(
 				if (Math.abs(gamepad.axes[i] * 7 - HNum) < 0.000001 && HDpadMapping[HNum.toString()]) {
 					const v = HDpadMapping[HNum.toString()];
 					for (let key in dpad) {
-						dpad[key as dpad] = (v & info.hatDpad[key as dpad]) > 0;
+						dpad[key as Dpad] = (v & info.hatDpad[key as Dpad]) > 0;
 					}
 				}
 			}
@@ -463,7 +461,7 @@ export function getDirection(
 	);
 }
 
-export function getExtraAnalog(gamepad: Gamepad, info: gamepadInfo): Record<string, number> {
+export function getExtraAnalog(gamepad: Gamepad, info: GamepadInfo): Record<string, number> {
 	const result: Record<string, number> = {};
 	for (let i = 0; i < gamepad.axes.length; i++) {
 		let analogType = 0;
@@ -508,7 +506,7 @@ export function getRawButtonPress(gamepad:Gamepad):boolean[]{
 }
 */
 
-export function getButtonPress(gamepad: Gamepad, info: gamepadInfo, skipDpad: boolean = false): (boolean | null)[] {
+export function getButtonPress(gamepad: Gamepad, info: GamepadInfo, skipDpad: boolean = false): (boolean | null)[] {
 	const result: (boolean | null)[] = [];
 	for (let i = 0; i < gamepad.buttons.length; i++) {
 		if (gamepad.mapping === 'standard') {
@@ -556,7 +554,7 @@ export function getButtonPress(gamepad: Gamepad, info: gamepadInfo, skipDpad: bo
 	return result;
 }
 
-export function getButtonValue(gamepad: Gamepad, info: gamepadInfo, skipDpad: boolean = false): (number | null)[] {
+export function getButtonValue(gamepad: Gamepad, info: GamepadInfo, skipDpad: boolean = false): (number | null)[] {
 	const result: (number | null)[] = [];
 	for (let i = 0; i < gamepad.buttons.length; i++) {
 		if (gamepad.mapping === 'standard') {
@@ -608,7 +606,7 @@ export function getButtonValue(gamepad: Gamepad, info: gamepadInfo, skipDpad: bo
  * Standard button names by standard index — the same set for every vendor.
  * For the vendor's own *look*, render {@link getButtonGlyphs} instead of renaming.
  */
-export function getButtonName(info: gamepadInfo): (string | null)[] {
+export function getButtonName(info: GamepadInfo): (string | null)[] {
 	const result: (string | null)[] = [];
 
 	//get original name

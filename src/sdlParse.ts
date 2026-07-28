@@ -1,6 +1,6 @@
-import { gamepadInfo } from './types';
+import { GamepadInfo } from './types';
 import { SYSTEM_BUTTON_NAME } from './config';
-import { dpad } from './direction';
+import { Dpad } from './direction';
 
 const lineReg = /^([^a-z0-9]{0,1})([a-z]{1})([\d.]{1,3})([^a-z0-9]{0,1})$/;
 
@@ -8,7 +8,7 @@ type parseSDLDict_result = {
 	standard: boolean;
 	buttonNames: string[];
 	keyMapping: number[];
-	hatDpad: Record<dpad, number> | undefined;
+	hatDpad: Record<Dpad, number> | undefined;
 	analogNames: string[];
 	analogPlusNames: string[];
 	analogMinusNames: string[];
@@ -24,7 +24,7 @@ export function parseSDLDict(data: Record<string, string>): parseSDLDict_result 
 	const analogPlusNames: string[] = [];
 	const analogMinusNames: string[] = [];
 	const keyMapping: number[] = [];
-	let hatDpad: Record<dpad, number> | undefined;
+	let hatDpad: Record<Dpad, number> | undefined;
 
 	for (const key in data) {
 		if (key === 'platform') continue;
@@ -64,7 +64,7 @@ export function parseSDLDict(data: Record<string, string>): parseSDLDict_result 
 			const [hat, hatval] = valArr[3].split('.');
 			if (hatval) {
 				if (key.substring(0, 2) === 'dp') {
-					hatDpad[key.substring(2) as dpad] = parseInt(hatval);
+					hatDpad[key.substring(2) as Dpad] = parseInt(hatval);
 				} else {
 					//*
 				}
@@ -84,14 +84,14 @@ export function parseSDLDict(data: Record<string, string>): parseSDLDict_result 
 }
 
 /**
- * Parse a single SDL_GameControllerDB line into a {@link gamepadInfo}.
+ * Parse a single SDL_GameControllerDB line into a {@link GamepadInfo}.
  * Returns `null` for comment lines, malformed guids, or lines whose `platform`
  * does not match `platformFilter` (when given).
  *
  * Note: `defaultSwapAB` is intentionally NOT set here — it depends on the vendor
  * table and is applied by the caller in gamepad_standardizer.ts.
  */
-export function parseSDLLine(line: string, platformFilter?: string): gamepadInfo | null {
+export function parseSDLLine(line: string, platformFilter?: string): GamepadInfo | null {
 	if (line.startsWith('#')) return null;
 	const arr = line.split(',');
 
@@ -113,11 +113,11 @@ export function parseSDLLine(line: string, platformFilter?: string): gamepadInfo
 }
 
 /**
- * Parse a full SDL_GameControllerDB text blob into {@link gamepadInfo} entries,
+ * Parse a full SDL_GameControllerDB text blob into {@link GamepadInfo} entries,
  * keeping only lines that match `platformFilter` when provided.
  */
-export function parseSDLText(text: string, platformFilter?: string): gamepadInfo[] {
-	const result: gamepadInfo[] = [];
+export function parseSDLText(text: string, platformFilter?: string): GamepadInfo[] {
+	const result: GamepadInfo[] = [];
 	for (const line of text.split('\n')) {
 		const info = parseSDLLine(line, platformFilter);
 		if (info) result.push(info);

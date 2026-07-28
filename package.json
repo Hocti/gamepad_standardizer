@@ -1,6 +1,6 @@
 {
   "name": "gamepad_standardizer",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "description": "Standardises gamepad input into a normalised format.",
   "type": "module",
   "license": "MIT",
@@ -19,6 +19,10 @@
       "types": "./dist/gamepadStandardizer.d.ts",
       "development": "./src/index.ts",
       "import": "./dist/gamepadStandardizer.mjs"
+    },
+    "./local_override.txt": {
+      "development": "./src/db/local_override.txt",
+      "default": "./dist/db/local_override.txt"
     }
   },
   "files": [

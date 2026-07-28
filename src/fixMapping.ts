@@ -1,7 +1,7 @@
-import { dpad } from './direction';
+import { Dpad } from './direction';
 import { HDpadMapping, oppositeDpad, SYSTEM_BUTTON_NAME } from './config';
 
-export function fixhatDpad(up_HNum: number, left_HNum: number): Record<dpad, number> {
+export function fixhatDpad(up_HNum: number, left_HNum: number): Record<Dpad, number> {
 	const up_HNum_str = up_HNum.toString();
 	const left_HNum_str = left_HNum.toString();
 	return {
@@ -16,7 +16,7 @@ type fixAnalog_result = {
 	analogNames: string[];
 	analogMinusNames?: string[];
 	analogPlusNames?: string[];
-	hatDpad?: Record<dpad, number>;
+	hatDpad?: Record<Dpad, number>;
 };
 export function fixAnalog(
 	left?: {
@@ -27,7 +27,7 @@ export function fixAnalog(
 		x: number; //axes_index
 		y: number; //axes_index
 	},
-	dpad_analog?: Record<dpad, { axes_index: number; Operation: '-' | '+' }>,
+	dpad_analog?: Record<Dpad, { axes_index: number; Operation: '-' | '+' }>,
 	dpad_hat?: {
 		up_HNum: number;
 		left_HNum: number;
@@ -53,7 +53,7 @@ export function fixAnalog(
 		const analogPlusNames: string[] = [];
 
 		for (let direction in dpad_analog) {
-			const { axes_index, Operation } = dpad_analog![direction as dpad];
+			const { axes_index, Operation } = dpad_analog![direction as Dpad];
 			if (Operation === '-') {
 				analogMinusNames[axes_index] = `dp${direction}`;
 			} else if (Operation === '+') {

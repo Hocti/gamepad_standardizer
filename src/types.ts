@@ -1,6 +1,6 @@
-import { dpad, directionWrap, dpadPress, xy } from './direction';
+import { Dpad } from './direction';
 
-export type gamepadInfo = {
+export type GamepadInfo = {
 	name: string;
 	buttonNames: (string | null)[];
 	analogNames: string[];
@@ -9,7 +9,7 @@ export type gamepadInfo = {
 	guid?: string;
 	vendor?: string;
 	product?: string;
-	hatDpad?: Record<dpad, number>;
+	hatDpad?: Record<Dpad, number>;
 	analogPlusNames?: string[];
 	analogMinusNames?: string[];
 	keyMapping?: (number | null)[];
@@ -26,23 +26,8 @@ export type gamepadInfo = {
 	};
 };
 
-export type gamePadProfile = {
-	vendorName?: string;
-	vendor: string;
-	productName?: string;
-	product?: string;
-	buttonNames: (string | null)[];
-	defaultSwapAB?: boolean;
-};
-export enum directSource {
+export enum DirectSource {
 	dpad = 'dpad',
 	leftAnalog = 'leftAnalog',
 	rightAnalog = 'rightAnalog',
 }
-
-// PascalCase aliases (preferred going forward). Legacy lowerCamelCase names kept as-is.
-export type GamepadInfo = gamepadInfo;
-export type GamePadProfile = gamePadProfile;
-export type DirectionWrap = directionWrap;
-export type DpadPress = dpadPress;
-export type XY = xy;

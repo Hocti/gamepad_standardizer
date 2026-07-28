@@ -1,4 +1,4 @@
-import { gamepadInfo } from './types';
+import { GamepadInfo } from './types';
 import { parseSDLText } from './sdlParse';
 
 const DEFAULT_URL = 'https://raw.githubusercontent.com/gabomdq/SDL_GameControllerDB/master/gamecontrollerdb.txt';
@@ -10,8 +10,8 @@ export type DBConfig =
 	| { mode: 'custom'; text: string };
 
 let config: DBConfig = { mode: 'fetch' }; // default 保持而家行為（fetch），但加咗 cache
-let loaded: gamepadInfo[] | undefined;
-let loading: Promise<gamepadInfo[]> | undefined;
+let loaded: GamepadInfo[] | undefined;
+let loading: Promise<GamepadInfo[]> | undefined;
 
 /**
  * Choose where the SDL controller DB comes from. Resets any cached load so the
@@ -58,7 +58,7 @@ const bundledLoaders: Record<string, () => Promise<{ default: unknown }>> = {
 	iOS: () => import('./db/ios.json'),
 };
 
-async function load(): Promise<gamepadInfo[]> {
+async function load(): Promise<GamepadInfo[]> {
 	const platform = currentPlatform();
 
 	if (config.mode === 'custom') {
@@ -68,7 +68,7 @@ async function load(): Promise<gamepadInfo[]> {
 	if (config.mode === 'bundled') {
 		const loader = bundledLoaders[platform] ?? bundledLoaders['Windows'];
 		const mod = await loader();
-		return mod.default as gamepadInfo[];
+		return mod.default as GamepadInfo[];
 	}
 
 	// fetch mode
@@ -100,7 +100,7 @@ async function load(): Promise<gamepadInfo[]> {
  * controller is encountered. Standard / xinput controllers must never cause a DB
  * load (neither bundled import nor network fetch). See getGamepadInfo.
  */
-export async function ensureDB(): Promise<gamepadInfo[]> {
+export async function ensureDB(): Promise<GamepadInfo[]> {
 	if (loaded) return loaded;
 	if (!loading) loading = load().then((r) => (loaded = r));
 	return loading;
