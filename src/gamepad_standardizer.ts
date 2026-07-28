@@ -1,8 +1,10 @@
-import { gamepadInfo, gamePadProfile, directSource } from './types';
+import { gamepadInfo, directSource } from './types';
+import { addPadFontProfile } from './glyphs';
 import { HDpadMapping, SYSTEM_BUTTON_NAME } from './config';
 import { dpad, xy, dpadPress, directionWrap, getAnalogDirection, getDpadDirection } from './direction';
 import { parseSDLDict, parseSDLText } from './sdlParse';
 import { configureDB, ensureDB, currentPlatform } from './dbSource';
+import { localOverrideFor } from './localOverride';
 
 //from SDL DB================================================================
 
@@ -41,7 +43,9 @@ export function SDLDB_processText(text: string): void {
 }
 
 const extraGamepadDB: gamepadInfo[] = [];
-//platform:asdf,browser:asdf,name:asdf,vendor:asdf,product:asdf,a:b0...
+//platform:asdf,browser:asdf,name:asdf,vendor:asdf,product:asdf,font:switch,a:b0...
+//`font` is optional and picks the glyph artwork (xbox|playstation|switch); it replaces
+//the old `buttonNames:A|B|C` field, since button *names* no longer vary by vendor.
 export function SDLDB_procesExtraText(text: string): void {
 	let lines = text.split('\n');
 	for (let line of lines) {
@@ -58,7 +62,6 @@ export function SDLDB_procesExtraText(text: string): void {
 		const vendor = data['vendor'];
 		const product = data['product'];
 
-		const buttonNames = data['buttonNames']?.split('|');
 		const defaultSwapAB = data['defaultSwapAB'] ? true : false;
 
 		const result = parseSDLDict(data);
@@ -73,98 +76,19 @@ export function SDLDB_procesExtraText(text: string): void {
 			defaultSwapAB: defaultSwapAB || getSwapAB(vendor, product),
 		});
 
-		if (buttonNames?.length > 0) {
-			addbtnNameProfile({
-				vendor,
-				product,
-				buttonNames,
-				productName: name,
-				defaultSwapAB,
-			});
+		const font = data['font'];
+		if (font === 'xbox' || font === 'playstation' || font === 'switch') {
+			addPadFontProfile({ vendor, product, productName: name, system: font });
 		}
 	}
 }
 
-//button alt name profile================================================================
+//vendor================================================================
 
+// Buttons have ONE name set across every vendor — the SDL standard names returned by
+// `getButtonName`. What differs per vendor is only how the button is *drawn*, and that
+// is a webfont choice, not a naming one: see `./glyphs` (`padFontId`) + `gamepad_fonts`.
 const NINTENDO_VENDOR_ID = '057e';
-const SONY_VENDOR_ID = '054c';
-
-const XINPUT_BUTTON_NAME = [
-	'A',
-	'B',
-	'X',
-	'Y',
-	'LB',
-	'RB',
-	'LT',
-	'RT',
-	'back',
-	'start',
-	'left Stick',
-	'right Stick',
-	'🔼',
-	'🔽',
-	'◀️',
-	'▶️',
-	'home',
-];
-
-const btnNameProfile: gamePadProfile[] = [
-	{
-		vendorName: 'Sony',
-		vendor: SONY_VENDOR_ID,
-		buttonNames: [
-			'X',
-			'O',
-			'square',
-			'triangle',
-			'L1',
-			'R1',
-			'L2',
-			'R2',
-			'Share',
-			'Options',
-			'L3',
-			'R3',
-			'🔼',
-			'🔽',
-			'◀️',
-			'▶️',
-			'PS',
-			'Touch',
-		],
-	},
-	{
-		vendorName: 'Nintendo',
-		vendor: NINTENDO_VENDOR_ID,
-		defaultSwapAB: true,
-		buttonNames: [
-			'B',
-			'A',
-			'Y',
-			'X',
-			'L',
-			'R',
-			'ZL',
-			'ZR',
-			'-',
-			'+',
-			'left Stick',
-			'right Stick',
-			'🔼',
-			'🔽',
-			'◀️',
-			'▶️',
-			'home',
-			'share',
-		],
-	},
-];
-
-export function addbtnNameProfile(profile: gamePadProfile) {
-	btnNameProfile.push(profile);
-}
 
 function getSwapAB(vendor: string | undefined, product: string | undefined): boolean {
 	if (vendor === NINTENDO_VENDOR_ID) {
@@ -253,6 +177,13 @@ export async function getGamepadInfo(gamepad: Gamepad): Promise<gamepadInfo> {
 		index: gamepad.index,
 		mapping: gamepad.mapping,
 	};
+
+	// Hand-written override wins over every other source, including the browser's own
+	// `mapping: "standard"` claim — a pad only needs an entry here *because* that claim is
+	// wrong for it (see db/local_override.ts). Checked before the branch below so a
+	// mis-standardised pad is reachable at all; the SDL DB never is, for a standard pad.
+	const override = localOverrideFor(baseInfo.vendor, baseInfo.product);
+	if (override) return { ...override, originInfo };
 
 	//unstandard
 	if (gamepad.mapping !== 'standard') {
@@ -673,7 +604,11 @@ export function getButtonValue(gamepad: Gamepad, info: gamepadInfo, skipDpad: bo
 	return result;
 }
 
-export function getButtonName(info: gamepadInfo, rename: boolean = false): (string | null)[] {
+/**
+ * Standard button names by standard index — the same set for every vendor.
+ * For the vendor's own *look*, render {@link getButtonGlyphs} instead of renaming.
+ */
+export function getButtonName(info: gamepadInfo): (string | null)[] {
 	const result: (string | null)[] = [];
 
 	//get original name
@@ -689,28 +624,6 @@ export function getButtonName(info: gamepadInfo, rename: boolean = false): (stri
 			}
 			if (i == 7 && info.analogNames.indexOf('righttrigger') >= 0) {
 				result[7] = 'righttrigger';
-			}
-		}
-	}
-
-	if (rename) {
-		//rename to vendor default
-		let newNames: (string | null)[] | undefined;
-		if (!newNames && info.standard) {
-			newNames = XINPUT_BUTTON_NAME;
-		}
-		for (let profile of btnNameProfile) {
-			if (profile.vendor === info.vendor && (!profile.product || profile.product === info.product)) {
-				newNames = profile.buttonNames;
-				break;
-			}
-		}
-
-		if (newNames) {
-			for (let i = 0; i < result.length; i++) {
-				if (result[i] && newNames[i] && (i < 12 || i > 15)) {
-					result[i] = newNames[i];
-				}
 			}
 		}
 	}

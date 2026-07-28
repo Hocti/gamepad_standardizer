@@ -4,5 +4,8 @@ export * from './direction';
 export * from './fixMapping';
 export * from './sdlParse';
 export { configureDB, ensureDB, currentPlatform } from './dbSource';
+export { localOverrideFor, localOverrideCount, parseLocalOverrides, addLocalOverrides } from './localOverride';
+export { LOCAL_OVERRIDE_TEXT } from './db/local_override';
 export type { DBConfig } from './dbSource';
 export * from './gamepad_standardizer';
+export * from './glyphs';

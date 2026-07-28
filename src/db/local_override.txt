@@ -1,0 +1,66 @@
+# Local controller overrides — the default file shipped with gamepad_standardizer.
+#
+# This file is plain text and is NOT compiled into the bundle. It is copied to
+# dist/db/local_override.txt and fetched at runtime, so you can edit it in place
+# (in dist/, or in your own copy) without rebuilding the library.
+#
+# WHEN IT IS LOADED
+# -----------------
+# Lazily, and only when a controller the browser reports as **non-standard**
+# connects (inside getGamepadInfo). A pad with mapping:"standard" never causes a
+# fetch — same contract as the SDL DB. Overrides are consulted BEFORE the SDL DB,
+# so an entry here wins over any SDL line for the same vendor/product.
+#
+# ADDING YOUR OWN FILE
+# --------------------
+# This one is only the default. An app can point at more files of the same format:
+#
+#   import { addLocalOverrideUrl, configureLocalOverrides } from 'gamepad_standardizer';
+#
+#   addLocalOverrideUrl('./my-pads.txt');            // loaded after the default; later wins
+#   configureLocalOverrides({                        // or replace the list outright
+#     urls: ['./my-pads.txt'],
+#     includeDefault: false,
+#   });
+#
+# WHY THIS IS NOT SDL_GameControllerDB FORMAT
+# -------------------------------------------
+# SDL_GameControllerDB numbers buttons/axes the way the OS reports them (raw evdev
+# on Linux). The browser does not hand us raw evdev — it hands us whatever its own
+# mapper produced, so an SDL line describes the wrong coordinate space. On
+# non-Windows, getGamepadInfo also discards SDL button/axis data on a DB hit and
+# substitutes the standard layout (see gamepad_standardizer.ts), which makes an
+# added SDL line a no-op there.
+#
+# Entries here are therefore written against **the indices the browser reports** —
+# exactly what a raw Gamepad API dump prints.
+#
+# FORMAT
+# ------
+# One entry per line. '#' starts a comment; blank lines are ignored.
+# Comma-separated 'key:value' pairs. Whitespace around a pair is trimmed.
+#
+#   vendor    REQUIRED  4 hex digits, from the pad id "... Vendor: 2dc8 ..."
+#   product   REQUIRED  4 hex digits, from "... Product: 310b ..."
+#   name      optional  human label (debug output only)
+#   platform  optional  Windows | Mac OS X | Linux | Android | iOS
+#                       when present the entry is IGNORED on other platforms
+#   font      optional  xbox | playstation | switch — glyph artwork only
+#
+# Every other pair is a mapping, '<action>:<source>':
+#
+#   a:b0        action "a"     <- button index 0
+#   dpup:b12    action "dpup"  <- button index 12
+#   leftx:a0    action "leftx" <- axis 0 (full range)
+#   lefty:-a1   axis 1, negative half only
+#   righty:+a3  axis 3, positive half only
+#   dpup:h0.1   hat 0, value 1   (dpright 2, dpdown 4, dpleft 8)
+#
+# Action names are the SDL standard set — see SYSTEM_BUTTON_NAME in src/config.ts:
+#   a b x y back guide start leftstick rightstick leftshoulder rightshoulder
+#   dpup dpdown dpleft dpright  (+ analog: leftx lefty rightx righty lefttrigger righttrigger)
+#
+# NOTE: 'start' is what the UI layer pairs to "escape"/pause, and dpup/dpdown/dpleft/
+# dpright are what menu navigation reads. Those are usually the ones worth fixing.
+
+name:8BitDo Ultimate 2 Wireless,platform:Linux,vendor:2dc8,product:310b,a:b0,b:b1,back:b6,dpdown:+a7,dpleft:-a6,dpright:+a6,dpup:-a7,guide:b8,leftshoulder:b4,leftstick:b9,lefttrigger:a2,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b10,righttrigger:a5,rightx:a3,righty:a4,start:b7,x:b2,y:b3

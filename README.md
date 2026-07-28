@@ -34,14 +34,14 @@ After using the Gamepad Standardizer from [my demo](https://hocti-demo.s3.ap-sou
 ![img](https://github.com/Hocti/gamepad_standardizer/blob/main/doc/ps5_ff.png?raw=true)
 - The mapped button index now follows the [W3C standard](https://www.w3.org/TR/gamepad/#remapping), as returned by `getButtonPress` / `getButtonValue`.
 - Unused buttons will return null.
-- Buttons have two names: the default name from SDL_GameControllerDB, and a customized emoji name, as returned by `getButtonName`.
+- Buttons have one name set — the SDL_GameControllerDB standard names, as returned by `getButtonName`. What differs per vendor is the *artwork*, drawn from the `gamepad_fonts` colour webfont via `getButtonGlyphs` / `padFontId`.
 - All D-pad and analog inputs are grouped into single Object, returned by `getDirection`.
 - Extra analog values (triggers) are returned by `getExtraAnalog`.
 
 ### 8bitdo SFC30
 ![img](https://github.com/Hocti/gamepad_standardizer/blob/main/doc/sfc30_after.png?raw=true)
 - `getDirection` now returns one d-pad only, not analog.
-- By using `addbtnNameProfile`, I manually added the new button names, by providing controller's vender and product code.
+- By using `addPadFontProfile`, I told it to draw this pad with Nintendo glyphs, by providing controller's vender and product code.
 - unused buttons would return null
 
 ### PS5 @ Chrome
@@ -98,6 +98,37 @@ configureDB({ mode: 'custom', text: mySDLText });
 
 > `SDLDB_setLink()` / `SDLDB_fetch()` still work but are **deprecated** — prefer `configureDB`.
 
+### Per-device overrides (`local_override.txt`)
+
+Some pads are mapped wrongly by the *browser*, so an SDL line cannot describe them — SDL numbers
+buttons the way the OS reports them, while the browser hands you its own mapper's output. Those
+pads are fixed with override entries written against **the indices the browser reports**.
+
+They live in plain `.txt` files fetched at runtime, **not** compiled into the bundle. The package
+ships one at `dist/db/local_override.txt` as the default — edit it in place, or point at your own:
+
+```javascript
+import { addLocalOverrideUrl, configureLocalOverrides, addLocalOverrides } from 'gamepad_standardizer';
+
+// Add your own file on top of the shipped default. Later files win.
+addLocalOverrideUrl('./my-pads.txt');
+
+// Or replace the list outright:
+configureLocalOverrides({ urls: ['./my-pads.txt'], includeDefault: false });
+
+// Or hand over the text directly — e.g. inlined at build time, or from a settings screen.
+// Needed for `file://` builds (Electron), where fetch() from an opaque origin is blocked:
+import padOverrides from 'gamepad_standardizer/local_override.txt?raw';
+configureLocalOverrides({ includeDefault: false });
+addLocalOverrides(padOverrides);
+```
+
+Same lazy contract as the SDL DB: **nothing is fetched until a non-standard controller connects**,
+and overrides are consulted *before* the SDL DB, so they win for that vendor/product. A missing or
+unreachable file logs a warning and is treated as "no overrides" — it never breaks pad support.
+
+The file's own header documents the entry format; see [`src/db/local_override.txt`](./src/db/local_override.txt).
+
 ### Getting Gamepad Information
 
 Retrieve information about a connected gamepad:
@@ -128,6 +159,11 @@ console.log(buttonPresses);
 ## API Reference
 
 - `configureDB(config)`: Choose the SDL DB source — `{ mode: 'fetch' | 'bundled' | 'custom', … }` (see Usage above). Preferred over `SDLDB_setLink`.
+- `configureLocalOverrides({ urls?, includeDefault? })`: Replace the per-device override `.txt` list.
+- `addLocalOverrideUrl(url: string)`: Add one more override `.txt` path; loaded last, so it wins.
+- `addLocalOverrides(text: string)`: Add overrides as inline text, in the same format.
+- `localOverrideFor(vendor, product)` / `localOverrideCount()` / `ensureLocalOverrides()`: async — trigger the lazy load.
+- `DEFAULT_LOCAL_OVERRIDE_URL`: URL of the `.txt` shipped with the package.
 - `SDLDB_setLink(link: string)`: **@deprecated** — sets the fetch link for the SDL database (now forwards to `configureDB({ mode: 'fetch', url })`).
 - `getGamepadInfo(gamepad: Gamepad)`: Returns information about the connected gamepad.
 - `getDirectionAvailable(gamepad: Gamepad, info: gamepadInfo)`: Checks the availability of directional inputs.
@@ -135,7 +171,11 @@ console.log(buttonPresses);
 - `getExtraAnalog(gamepad: Gamepad, info: gamepadInfo)`: Retrieves extra analog inputs.
 - `getButtonPress(gamepad: Gamepad, info: gamepadInfo, skipDpad?: boolean)`: Detects button presses.
 - `getButtonValue(gamepad: Gamepad, info: gamepadInfo, skipDpad?: boolean)`: Gets the value of button presses.
-- `getButtonName(info: gamepadInfo, rename?: boolean)`: Retrieves the names of gamepad buttons.
+- `getButtonName(info: gamepadInfo)`: Retrieves the standard names of gamepad buttons (same set for every vendor).
+- `getButtonGlyphs(info: gamepadInfo, opts?: GlyphOptions)`: Per-button glyph character + CSS font-family, drawn from the `gamepad_fonts` webfont.
+- `padFontId(info: gamepadInfo, opts?: GlyphOptions)` / `padFontFamily(...)`: Which font family this controller should be drawn with.
+- `installPadFonts(root?: Document | ShadowRoot)`: Injects the `@font-face` rules once.
+- `addPadFontProfile(profile: PadFontProfile)`: Maps a vendor/product to the glyph artwork it should use.
 
 ## Contributing
 
